@@ -1,0 +1,11 @@
+# clangd configuration for the ESP-IDF projects in this repo.
+# The build uses GCC; these GCC-only flags from compile_commands.json are unknown to clang
+# and would show up as errors on line 1 of every file.
+CompileFlags:
+  Remove:
+    - -mdisable-hardware-atomics
+    - -fzero-init-padding-bits=*
+    - -fstrict-volatile-bitfields
+    - -fno-tree-switch-conversion
+    - -fno-malloc-dce
+    - -fno-shrink-wrap

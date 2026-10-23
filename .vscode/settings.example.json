@@ -1,0 +1,32 @@
+{
+  "idf.flashType": "UART",
+  "idf.openOcdConfigs": [
+    "board/esp32s3-builtin.cfg"
+  ],
+  "idf.extensionActivationMode": "always",
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "cmake.configureOnOpen": false,
+  "cmake.configureOnEdit": false,
+  "cmake.automaticReconfigure": false,
+  "cmake.autoSelectActiveFolder": false,
+  "stm32cube-ide-clangd.path": "${userHome}/.espressif/tools/esp-clang/esp-20.1.1_20250829/esp-clang/bin/clangd",
+  "stm32cube-ide-clangd.arguments": [
+    "--background-index",
+    "--query-driver=**/*-elf-gcc*",
+    "--compile-commands-dir=${workspaceFolder}/build",
+    "--header-insertion=never"
+  ],
+  "clangd.path": "${userHome}/.espressif/tools/esp-clang/esp-20.1.1_20250829/esp-clang/bin/clangd",
+  "clangd.arguments": [
+    "--background-index",
+    "--query-driver=**/*-elf-gcc*",
+    "--compile-commands-dir=${workspaceFolder}/build",
+    "--header-insertion=never"
+  ],
+  "files.exclude": {
+    "**/build": true
+  },
+  "files.associations": {
+    ".clangd": "yaml"
+  }
+}
