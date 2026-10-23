@@ -1,0 +1,14 @@
+<!-- A plain container, the XML twin of ui_box_create() in the firmware: no theme styles
+     (no background, border, padding or radius), not scrollable and not clickable, so taps
+     go to the parent. Turn the flags back on where needed: clickable="true" on a row,
+     scrollable="true" on the list.
+
+     <remove_style_all/> lives in its own component on purpose: the attributes of a <view>
+     are applied before its children run, so styles set on this same view would be wiped.
+     Anything set on a <box> instance, or on a view that extends box, is applied after the
+     wipe and survives. -->
+<component>
+	<view extends="lv_obj" scrollable="false" clickable="false">
+		<remove_style_all />
+	</view>
+</component>

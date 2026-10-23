@@ -1,0 +1,92 @@
+<!-- Watchlist header, 480x56: mood title, roll-speed slider with its readout, and the status
+     label (docs/ui-spec.md, "Header").
+
+     | Stonks!       ===o======  0.3x         wifi 16:55 |
+
+     The title is the mood of the whole list, from the average change % of the stocks with a
+     quote. The firmware switches it at run time: "Stonks!" in #color_up (above 0),
+     "Not stonks..." in #color_down (below 0), "Stonks?" in #color_flat (exactly 0, or no data
+     yet, which is also this component's default).
+
+     The slider sets the auto-roll speed in tenths: 0 = stopped .. 10 = 1.0x, where 1.0x
+     glides one row per second. The readout shows "1.5x", or "Stop" at 0. The design shows
+     the default, 3 and "0.3x". The firmware sets both from its settings and handles the
+     slider's events in C (find them with lv_obj_find_by_name(header, "slider_speed") and
+     "lbl_speed").
+
+     The status text carries its own icon: "&#xF1EB; 16:55" (online, time of the last refresh)
+     or "&#xF1EB; ..." (connecting) with LV_SYMBOL_WIFI, "&#xF071; Wi-Fi" (Wi-Fi not configured)
+     or "&#xF071; Error" with LV_SYMBOL_WARNING, in #color_down. font_14 shows the icon
+     through its icons_14 fallback (see globals.xml).
+
+     Exported as: lv_obj_t * app_header_create(lv_obj_t * parent, const char * title,
+                                               lv_color_t title_color, const char * status); -->
+<component>
+	<previews>
+		<preview
+			name="device"
+			width="480"
+			height="56"
+			style_pad_all="0"
+			style_radius="0"
+			style_border_width="0"
+			style_bg_color="#color_bg_screen"
+		/>
+	</previews>
+
+	<api>
+		<prop name="title" type="string" default="Stonks?" help="Mood of the list: Stonks!, Not stonks... or Stonks?" />
+		<prop name="title_color" type="color" default="#color_flat" help="Title colour: color_up, color_down or color_flat" />
+		<prop name="status" type="string" default="&#xF1EB; 16:55" help="Wi-Fi icon and time of the last refresh, or the connection state" />
+	</api>
+
+	<styles>
+		<!-- Speed slider parts, as in the firmware's create_header(). The theme's round ends stay;
+		     its 20% track opacity is replaced, or the track disappears on the header. -->
+		<style name="style_speed_track" bg_color="#color_track" bg_opa="100%" />
+		<style name="style_speed_indicator" bg_color="#color_accent" />
+		<!-- 6 px padding around the 6 px track: an 18 px white knob -->
+		<style name="style_speed_knob" bg_color="#color_on_fill" pad_all="6" shadow_width="0" />
+	</styles>
+
+	<view extends="box" width="100%" height="#header_height">
+		<style name="style_bar" />
+
+		<lv_label
+			name="lbl_title"
+			text="$title"
+			align="left_mid"
+			x="#pad_edge"
+			style_text_font="font_24"
+			style_text_color="$title_color"
+		/>
+
+		<!-- 136x6 at x=196, vertically centred. The track is thin, so the click area reaches
+		     18 px around it. -->
+		<lv_slider
+			name="slider_speed"
+			width="#speed_slider_width"
+			height="#speed_slider_height"
+			align="left_mid"
+			x="#speed_slider_x"
+			min_value="0"
+			max_value="#speed_max"
+			value="3"
+			ext_click_area="18"
+		>
+			<style name="style_speed_track" />
+			<style name="style_speed_indicator" selector="indicator" />
+			<style name="style_speed_knob" selector="knob" />
+		</lv_slider>
+
+		<!-- 14 px right of the slider -->
+		<lv_label name="lbl_speed" text="0.3x" align="left_mid" x="#speed_label_x">
+			<style name="style_caption" />
+		</lv_label>
+
+		<!-- Right edge at x=464 -->
+		<lv_label name="lbl_status" text="$status" align="right_mid" x="-16">
+			<style name="style_caption" />
+		</lv_label>
+	</view>
+</component>

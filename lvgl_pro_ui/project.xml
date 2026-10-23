@@ -1,0 +1,11 @@
+<!-- Stock watchlist UI for the Waveshare ESP32-S3-Touch-LCD-4B (480x480 RGB565 panel).
+     lvgl_version matches the firmware's LVGL (lvgl/lvgl 9.5.0 in 02_stock_watchlist).
+     "name" sets the exported names: stock_ui.h, stock_ui_init(), STOCK_UI_* macros.
+     The colour depth (16 bit) is not set here: it is the firmware's CONFIG_LV_COLOR_DEPTH. -->
+<project name="stock_ui" lvgl_version="9.5.0" theme="default">
+	<targets>
+		<target name="device">
+			<display width="480" height="480" />
+		</target>
+	</targets>
+</project>

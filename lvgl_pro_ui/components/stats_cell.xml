@@ -1,0 +1,35 @@
+<!-- One cell of the detail screen's 3x2 stats grid, 149x48: a caption with the value below it
+     (docs/ui-spec.md, "Stats grid").
+     Exported as: lv_obj_t * stats_cell_create(lv_obj_t * parent, const char * caption,
+                                               const char * value); -->
+<component>
+	<previews>
+		<preview
+			name="device"
+			width="149"
+			height="48"
+			style_pad_all="0"
+			style_radius="0"
+			style_border_width="0"
+			style_bg_color="#color_bg_screen"
+		/>
+	</previews>
+
+	<api>
+		<prop name="caption" type="string" default="Open" help="What the value is" />
+		<prop name="value" type="string" default="--" help="Formatted value, e.g. 63.52 or 39.59M" />
+	</api>
+
+	<view extends="box" width="#stat_width" height="#stat_height">
+		<lv_label name="lbl_caption" text="$caption">
+			<style name="style_caption" />
+		</lv_label>
+		<lv_label
+			name="lbl_value"
+			text="$value"
+			y="20"
+			style_text_font="font_16"
+			style_text_color="#color_text_primary"
+		/>
+	</view>
+</component>

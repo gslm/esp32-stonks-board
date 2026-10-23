@@ -1,0 +1,126 @@
+<!-- Screen 2: detail of one stock (docs/ui-spec.md), with VALE3 as sample data.
+     Exported as: lv_obj_t * screen_detail_create(void); -->
+<screen>
+	<styles>
+		<!-- Chart background, padding and the division lines (line_* on the main part) -->
+		<style
+			name="style_chart"
+			bg_color="#color_bg_header"
+			bg_opa="100%"
+			radius="#radius_small"
+			border_width="0"
+			pad_all="12"
+			line_color="#color_divider"
+		/>
+		<!-- The series line (items part) -->
+		<style name="style_chart_line" line_width="3" />
+		<!-- No point markers (indicator part) -->
+		<style name="style_chart_no_points" width="0" height="0" />
+	</styles>
+
+	<view scrollable="false">
+		<style name="style_screen" />
+
+		<!-- Header: (<)  VALE3   Vale SA  (the ticker is gold) -->
+		<box name="header" width="100%" height="#header_height">
+			<style name="style_bar" />
+
+			<lv_button name="btn_back" width="#touch_size" height="#touch_size" align="left_mid" x="8">
+				<style name="style_button_ghost" />
+				<!-- LV_SYMBOL_LEFT -->
+				<lv_label
+					text="&#xF053;"
+					align="center"
+					style_text_font="icons_20"
+					style_text_color="#color_text_primary"
+				/>
+			</lv_button>
+
+			<!-- Symbol at x=60, then the name 12 px to its right (like lv_obj_align_to with
+			     LV_ALIGN_OUT_RIGHT_MID, 12, 2 in the firmware) -->
+			<box
+				name="title_row"
+				width="content"
+				height="content"
+				align="left_mid"
+				x="60"
+				flex_flow="row"
+				style_flex_cross_place="center"
+				style_pad_column="12"
+			>
+				<lv_label name="lbl_symbol" text="VALE3" style_text_font="font_24" style_text_color="#color_gold" />
+				<lv_label
+					name="lbl_name"
+					text="Vale SA"
+					width="260"
+					height="#caption_line_height"
+					long_mode="dots"
+					style_translate_y="2"
+				>
+					<style name="style_caption" />
+				</lv_label>
+			</box>
+		</box>
+
+		<!-- Price block -->
+		<lv_label
+			name="lbl_price"
+			text="61.49"
+			x="#pad_edge"
+			y="64"
+			style_text_font="font_40"
+			style_text_color="#color_text_primary"
+		/>
+		<lv_label
+			name="lbl_change"
+			text="-2.54  (-3.97%)"
+			x="#pad_edge"
+			y="112"
+			style_text_font="font_20"
+			style_text_color="#color_down"
+		/>
+
+		<!-- Intraday line chart, 448x200 at (16, 148). Values are in cents, as in the
+		     firmware: 29 closes from 63.52 down to 61.49, low 61.40. The Y range is the
+		     firmware's: min - pad .. max + pad, with pad = (max - min) / 10 + 1.
+		     4 horizontal lines = the top and bottom edges plus 2 in between. -->
+		<lv_chart
+			name="chart"
+			x="#pad_edge"
+			y="148"
+			width="#content_width"
+			height="200"
+			type="line"
+			point_count="29"
+			hor_div_line_count="4"
+			ver_div_line_count="0"
+		>
+			<style name="style_chart" />
+			<style name="style_chart_line" selector="items" />
+			<style name="style_chart_no_points" selector="indicator" />
+			<lv_chart-axis axis="primary_y" min_value="6118" max_value="6374" />
+			<lv_chart-series
+				color="#color_down"
+				axis="primary_y"
+				values="6352 6344 6331 6336 6318 6305 6311 6294 6283 6290 6271 6262 6268 6249 6236 6241 6222 6210 6216 6197 6185 6190 6172 6161 6140 6152 6158 6143 6149"
+			/>
+		</lv_chart>
+
+		<!-- Stats grid at (16, 360): 3 columns of 149 px, 2 rows of 48 px, down to y=456 -->
+		<box
+			name="stats"
+			x="#pad_edge"
+			y="360"
+			width="#content_width"
+			height="96"
+			flex_flow="row_wrap"
+		>
+			<stats_cell name="stat_open" caption="Open" value="63.52" />
+			<stats_cell name="stat_high" caption="High" value="63.52" />
+			<stats_cell name="stat_low" caption="Low" value="61.40" />
+			<stats_cell name="stat_prev" caption="Prev close" value="64.03" />
+			<stats_cell name="stat_volume" caption="Volume" value="39.59M" />
+			<stats_cell name="stat_time" caption="Time" value="16:54" />
+		</box>
+	</view>
+</screen>

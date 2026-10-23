@@ -1,0 +1,100 @@
+<!-- Screen 1: watchlist (docs/ui-spec.md). Header, column captions, the list and its two edge
+     fades. The rows are sample data from the Investing.com "Ativos" list.
+     Exported as: lv_obj_t * screen_watchlist_create(void);
+
+     This is the static look only. In the firmware the list is an endless wheel that glides
+     continuously at the header slider's speed; that loop, the timers and the slider's events
+     are C code (main/ui/ui_watchlist.c), so here it is a plain list that
+     stops at the last row. -->
+<screen>
+	<view scrollable="false">
+		<style name="style_screen" />
+
+		<!-- y=0, h=56. "Stonks!" in #color_up is the average-up state. The firmware switches the
+		     title to "Not stonks..." (#color_down) or "Stonks?" (#color_flat) from the average
+		     change % of the list. The status shows the online state: Wi-Fi icon and the time of
+		     the last refresh. -->
+		<app_header name="header" title="Stonks!" title_color="#color_up" status="&#xF1EB; 16:55" />
+
+		<!-- y=56, h=28, 1 px divider at the bottom -->
+		<box name="captions" y="#header_height" width="100%" height="#captions_height">
+			<style name="style_divider_bottom" />
+			<lv_label text="Symbol" align="left_mid" x="#pad_edge">
+				<style name="style_caption" />
+			</lv_label>
+			<!-- Right edge at x=344, over the price column -->
+			<lv_label text="Last" align="right_mid" x="-136">
+				<style name="style_caption" />
+			</lv_label>
+			<!-- Right edge at x=464, over the pill -->
+			<lv_label text="Chg %" align="right_mid" x="-16">
+				<style name="style_caption" />
+			</lv_label>
+		</box>
+
+		<!-- y=84 down to the bottom edge (h=396): vertical flex column with no gaps, no scroll
+		     bar, and each row snaps to the top edge when a manual scroll ends -->
+		<box
+			name="list"
+			y="#list_top"
+			width="100%"
+			height="#list_height"
+			flex_flow="column"
+			scrollable="true"
+			clickable="true"
+			scrollbar_mode="off"
+			scroll_snap_y="start"
+		>
+			<stock_row symbol="VAMO3" full_name="Vamos Locacao" last="6.28" change="-0.12" change_pct="-1.88%" trend_color="#color_down" />
+			<stock_row
+				symbol="WIZC3"
+				full_name="Wiz Co Participacoes e Corretagem de Seguros"
+				last="6.97"
+				change="-0.01"
+				change_pct="-0.14%"
+				trend_color="#color_down"
+			/>
+			<stock_row symbol="HASH11" full_name="Hashdex Nasdaq Crypto" last="52.65" change="-1.96" change_pct="-3.59%" trend_color="#color_down" />
+			<stock_row symbol="BBAS3" full_name="Banco Do Brasil" last="23.92" change="-0.18" change_pct="-0.75%" trend_color="#color_down" />
+			<stock_row symbol="TAEE11" full_name="TAEE UNIT" last="44.90" change="-0.34" change_pct="-0.75%" trend_color="#color_down" />
+			<stock_row symbol="CPLE6" full_name="COPEL Pref B" last="14.26" change="0.00" change_pct="0.00%" trend_color="#color_flat" />
+			<stock_row symbol="ITSA4" full_name="Itausa Investimentos Itau Pref" last="15.30" change="-0.41" change_pct="-2.61%" trend_color="#color_down" />
+			<stock_row symbol="SNCI11" full_name="FII Suno Recebíveis Imobiliários" last="85.94" change="+0.49" change_pct="+0.57%" trend_color="#color_up" />
+			<stock_row symbol="EGIE3" full_name="ENGIE Brasil Energia" last="31.09" change="-0.01" change_pct="-0.03%" trend_color="#color_down" />
+			<stock_row symbol="VALE3" full_name="Vale SA" last="61.49" change="-2.54" change_pct="-3.97%" trend_color="#color_down" />
+			<stock_row symbol="WEGE3" full_name="WEG ON" last="44.00" change="-1.21" change_pct="-2.68%" trend_color="#color_down" />
+			<stock_row symbol="IVVB11" full_name="Fundo de Invest Ishares SP 500" last="436.55" change="-3.95" change_pct="-0.90%" trend_color="#color_down" />
+			<stock_row symbol="BBSE3" full_name="BB Seguridade" last="43.33" change="+0.87" change_pct="+2.05%" trend_color="#color_up" />
+		</box>
+
+		<!-- Edge fades: overlays above the list. A box is not clickable, so taps and drags go
+		     through to the list.
+		     The spec fades bg_screen smoothly from opaque to transparent. The 9.5.0 XML schema has
+		     bg_grad_dir and bg_grad_color but not bg_main_opa or bg_grad_opa, so a style can only
+		     blend between two opaque colours. Each fade is therefore a stack of equal bands of
+		     bg_screen with falling opacity (flex_grow splits the height). The firmware draws the
+		     real gradient with lv_obj_set_style_bg_main_opa() / _bg_grad_opa(). -->
+
+		<!-- Top, y=84, 12 px: opaque -> transparent, 6 bands of 2 px -->
+		<box name="fade_top" y="#list_top" width="100%" height="#fade_top_height" flex_flow="column">
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="92%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="75%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="58%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="42%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="25%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="8%" />
+		</box>
+
+		<!-- Bottom, y=440, 40 px: transparent -> opaque, 8 bands of 5 px -->
+		<box name="fade_bottom" align="bottom_left" width="100%" height="#fade_bottom_height" flex_flow="column">
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="6%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="19%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="31%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="44%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="56%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="69%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="81%" />
+			<box width="100%" flex_grow="1" style_bg_color="#color_bg_screen" style_bg_opa="94%" />
+		</box>
+	</view>
+</screen>

@@ -1,0 +1,233 @@
+<!-- Project-wide design tokens: colours, sizes, fonts and shared styles.
+     Source of truth: docs/ui-spec.md (revision 3). Reference a constant as #name, a font by its
+     name, and a style with <style name="..."/>. Every constant becomes an upper-case C macro in
+     the exported stock_ui_gen.h (color_accent -> COLOR_ACCENT). -->
+<globals>
+	<api>
+		<!-- No project-wide enums needed. -->
+	</api>
+
+	<consts>
+		<!-- Colour tokens from the spec. The "color_" prefix keeps the exported macros
+		     (COLOR_UP, COLOR_DOWN, ...) from clashing with other C code. -->
+		<color name="color_bg_screen" value="0x0D1117" help="bg_screen: screen and list background, edge fades" />
+		<color name="color_bg_header" value="0x161B22" help="bg_header: header bars, chart background" />
+		<color name="color_bg_pressed" value="0x1C2330" help="bg_pressed: row while pressed" />
+		<color name="color_divider" value="0x21262D" help="divider: 1 px lines between rows and under the captions" />
+		<color name="color_track" value="0x30363D" help="track: unfilled part of the speed slider (opaque)" />
+		<color name="color_text_primary" value="0xE6EDF3" help="text_primary: prices, values" />
+		<color name="color_text_secondary" value="0x8B949E" help="text_secondary: company names, captions, status" />
+		<color name="color_gold" value="0xF2C94C" help="gold: tickers (VAMO3, VALE3, ...)" />
+		<color name="color_accent" value="0x2F81F7" help="accent: speed slider indicator, chart with no trend" />
+		<color name="color_up" value="0x2EA043" help="up: positive change, the Stonks! title" />
+		<color name="color_down" value="0xF85149" help="down: negative change, errors, the Not stonks... title" />
+		<color name="color_flat" value="0x6E7681" help="flat: zero change, no data, the Stonks? title" />
+		<color name="color_on_fill" value="0xFFFFFF" help="White: text on a filled background (pill), speed slider knob" />
+
+		<!-- Layout, in pixels on the 480x480 panel -->
+		<int name="pad_edge" value="16" help="Left/right margin of the screens" />
+		<int name="content_width" value="448" help="Screen width minus two margins (chart, stats grid)" />
+		<int name="header_height" value="56" help="Header bar" />
+		<int name="captions_height" value="28" help="Column captions bar under the watchlist header" />
+		<int name="list_top" value="84" help="Top of the watchlist list (header + captions)" />
+		<int name="list_height" value="396" help="480 - 84: the list runs down to the bottom edge" />
+		<int name="row_height" value="76" help="One stock row" />
+		<int name="name_width" value="250" help="Width of the company name in a row" />
+		<int name="name_height" value="32" help="Two lines of font_12 (16 px each). The fixed height makes long_mode=dots wrap to 2 lines, then cut" />
+		<int name="caption_line_height" value="18" help="One line of font_14. A fixed height makes long_mode=dots cut the text instead of wrapping it" />
+		<int name="speed_slider_x" value="196" help="Left edge of the header speed slider" />
+		<int name="speed_slider_width" value="136" help="Header speed slider" />
+		<int name="speed_slider_height" value="6" help="Header speed slider track" />
+		<int name="speed_label_x" value="346" help="Speed readout, 14 px right of the slider (196 + 136 + 14)" />
+		<int name="speed_max" value="10" help="Slider range 0..10 in tenths: 0 = stopped, 10 = 1.0x" />
+		<int name="pill_width" value="96" help="Change % pill" />
+		<int name="pill_height" value="30" help="Change % pill" />
+		<int name="touch_size" value="44" help="Back button" />
+		<int name="radius_small" value="8" help="Pill, chart" />
+		<int name="fade_top_height" value="12" help="Edge fade over the top of the list" />
+		<int name="fade_bottom_height" value="40" help="Edge fade over the bottom of the list" />
+		<int name="stat_width" value="149" help="One cell of the 3x2 stats grid" />
+		<int name="stat_height" value="48" help="One cell of the 3x2 stats grid" />
+	</consts>
+
+	<!-- Montserrat Medium, compiled in as C arrays (as_file="false") with 4 bpp anti-aliasing.
+	     Range: ASCII + Latin-1 (accents such as "Recebíveis Imobiliários") + the typographic
+	     characters the firmware fonts also have (dashes, quotes, bullet, ellipsis, euro).
+
+	     LVGL symbols (LV_SYMBOL_WIFI, _WARNING, _PAUSE, _PLAY, _LEFT, ...) are FontAwesome glyphs.
+	     A <bin> font has a single src_path, so the icons are a second font (icons_N, from
+	     FontAwesome5.ttf) and each font_N names it as its fallback with
+	     lv_fallback="icons_N_data", the C symbol the export generates for icons_N. A label in
+	     font_N can then mix text and icons, like the firmware's merged fonts. This is the same
+	     setup as the LVGL Pro 2.0.5 "basic" template (font_body -> font_body_symbols_data).
+	     The icon range is the firmware fonts' range: OK F00C, CLOSE F00D, REFRESH F021,
+	     PLAY F04B, PAUSE F04C, LEFT F053, RIGHT F054, PLUS F067, WARNING F071, UP F077,
+	     DOWN F078, KEYBOARD F11C, WIFI F1EB, TRASH F2ED, BACKSPACE F55A, NEW_LINE F8A2.
+	     In XML text write them as &#xF1EB; etc. -->
+	<fonts>
+		<bin
+			name="icons_12"
+			src_path="fonts/FontAwesome5.ttf"
+			size="12"
+			bpp="4"
+			as_file="false"
+			range="0xF00C,0xF00D,0xF021,0xF04B,0xF04C,0xF053,0xF054,0xF067,0xF071,0xF077,0xF078,0xF11C,0xF1EB,0xF2ED,0xF55A,0xF8A2"
+		/>
+		<bin
+			name="icons_14"
+			src_path="fonts/FontAwesome5.ttf"
+			size="14"
+			bpp="4"
+			as_file="false"
+			range="0xF00C,0xF00D,0xF021,0xF04B,0xF04C,0xF053,0xF054,0xF067,0xF071,0xF077,0xF078,0xF11C,0xF1EB,0xF2ED,0xF55A,0xF8A2"
+		/>
+		<bin
+			name="icons_16"
+			src_path="fonts/FontAwesome5.ttf"
+			size="16"
+			bpp="4"
+			as_file="false"
+			range="0xF00C,0xF00D,0xF021,0xF04B,0xF04C,0xF053,0xF054,0xF067,0xF071,0xF077,0xF078,0xF11C,0xF1EB,0xF2ED,0xF55A,0xF8A2"
+		/>
+		<bin
+			name="icons_18"
+			src_path="fonts/FontAwesome5.ttf"
+			size="18"
+			bpp="4"
+			as_file="false"
+			range="0xF00C,0xF00D,0xF021,0xF04B,0xF04C,0xF053,0xF054,0xF067,0xF071,0xF077,0xF078,0xF11C,0xF1EB,0xF2ED,0xF55A,0xF8A2"
+		/>
+		<bin
+			name="icons_20"
+			src_path="fonts/FontAwesome5.ttf"
+			size="20"
+			bpp="4"
+			as_file="false"
+			range="0xF00C,0xF00D,0xF021,0xF04B,0xF04C,0xF053,0xF054,0xF067,0xF071,0xF077,0xF078,0xF11C,0xF1EB,0xF2ED,0xF55A,0xF8A2"
+		/>
+		<bin
+			name="icons_24"
+			src_path="fonts/FontAwesome5.ttf"
+			size="24"
+			bpp="4"
+			as_file="false"
+			range="0xF00C,0xF00D,0xF021,0xF04B,0xF04C,0xF053,0xF054,0xF067,0xF071,0xF077,0xF078,0xF11C,0xF1EB,0xF2ED,0xF55A,0xF8A2"
+		/>
+		<bin
+			name="icons_40"
+			src_path="fonts/FontAwesome5.ttf"
+			size="40"
+			bpp="4"
+			as_file="false"
+			range="0xF00C,0xF00D,0xF021,0xF04B,0xF04C,0xF053,0xF054,0xF067,0xF071,0xF077,0xF078,0xF11C,0xF1EB,0xF2ED,0xF55A,0xF8A2"
+		/>
+
+		<bin
+			name="font_12"
+			src_path="fonts/Montserrat-Medium.ttf"
+			size="12"
+			bpp="4"
+			as_file="false"
+			range="0x20-0x7E,0xA0-0xFF,0x2013,0x2014,0x2018,0x2019,0x201C,0x201D,0x2022,0x2026,0x20AC"
+			lv_fallback="icons_12_data"
+		/>
+		<bin
+			name="font_14"
+			src_path="fonts/Montserrat-Medium.ttf"
+			size="14"
+			bpp="4"
+			as_file="false"
+			range="0x20-0x7E,0xA0-0xFF,0x2013,0x2014,0x2018,0x2019,0x201C,0x201D,0x2022,0x2026,0x20AC"
+			lv_fallback="icons_14_data"
+		/>
+		<bin
+			name="font_16"
+			src_path="fonts/Montserrat-Medium.ttf"
+			size="16"
+			bpp="4"
+			as_file="false"
+			range="0x20-0x7E,0xA0-0xFF,0x2013,0x2014,0x2018,0x2019,0x201C,0x201D,0x2022,0x2026,0x20AC"
+			lv_fallback="icons_16_data"
+		/>
+		<bin
+			name="font_18"
+			src_path="fonts/Montserrat-Medium.ttf"
+			size="18"
+			bpp="4"
+			as_file="false"
+			range="0x20-0x7E,0xA0-0xFF,0x2013,0x2014,0x2018,0x2019,0x201C,0x201D,0x2022,0x2026,0x20AC"
+			lv_fallback="icons_18_data"
+		/>
+		<bin
+			name="font_20"
+			src_path="fonts/Montserrat-Medium.ttf"
+			size="20"
+			bpp="4"
+			as_file="false"
+			range="0x20-0x7E,0xA0-0xFF,0x2013,0x2014,0x2018,0x2019,0x201C,0x201D,0x2022,0x2026,0x20AC"
+			lv_fallback="icons_20_data"
+		/>
+		<bin
+			name="font_24"
+			src_path="fonts/Montserrat-Medium.ttf"
+			size="24"
+			bpp="4"
+			as_file="false"
+			range="0x20-0x7E,0xA0-0xFF,0x2013,0x2014,0x2018,0x2019,0x201C,0x201D,0x2022,0x2026,0x20AC"
+			lv_fallback="icons_24_data"
+		/>
+		<bin
+			name="font_40"
+			src_path="fonts/Montserrat-Medium.ttf"
+			size="40"
+			bpp="4"
+			as_file="false"
+			range="0x20-0x7E,0xA0-0xFF,0x2013,0x2014,0x2018,0x2019,0x201C,0x201D,0x2022,0x2026,0x20AC"
+			lv_fallback="icons_40_data"
+		/>
+	</fonts>
+
+	<subjects>
+		<!-- None: the preview shows static sample data, and the firmware sets the widgets from C. -->
+	</subjects>
+
+	<styles>
+		<!-- Screen background. Text colour and font are inherited by everything inside. -->
+		<style
+			name="style_screen"
+			bg_color="#color_bg_screen"
+			bg_opa="100%"
+			text_color="#color_text_primary"
+			text_font="font_16"
+		/>
+
+		<!-- Header bars -->
+		<style name="style_bar" bg_color="#color_bg_header" bg_opa="100%" />
+
+		<!-- 1 px divider at the bottom edge (captions bar) -->
+		<style name="style_divider_bottom" border_side="bottom" border_width="1" border_color="#color_divider" />
+
+		<!-- One watchlist row: opaque so the pressed colour shows, divider at the bottom -->
+		<style
+			name="style_row"
+			bg_color="#color_bg_screen"
+			bg_opa="100%"
+			border_side="bottom"
+			border_width="1"
+			border_color="#color_divider"
+		/>
+		<!-- Added with selector="pressed" -->
+		<style name="style_row_pressed" bg_color="#color_bg_pressed" />
+
+		<!-- Change % pill. Its colour is the trend colour, set per row. -->
+		<style name="style_pill" radius="#radius_small" bg_opa="100%" />
+
+		<!-- Captions, names and status texts -->
+		<style name="style_caption" text_font="font_14" text_color="#color_text_secondary" />
+
+		<!-- Buttons keep the theme's pressed effect but drop its shadow (the firmware does the same) -->
+		<style name="style_button_flat" shadow_width="0" />
+		<!-- Transparent button: the back arrow -->
+		<style name="style_button_ghost" bg_opa="0%" shadow_width="0" />
+	</styles>
+</globals>

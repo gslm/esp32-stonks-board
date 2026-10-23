@@ -1,0 +1,107 @@
+<!-- One watchlist row, 480x76 (docs/ui-spec.md, "Row").
+
+     | VAMO3                      6.28   ┌───────┐ |
+     | Vamos Locacao             -0.12   │-1.88% │ |
+     |                                   └───────┘ |
+
+     The ticker is gold. The company name takes up to 2 lines and only then ends with dots.
+     All values are strings, already formatted the way the firmware's ui_fmt_* functions
+     print them, and trend_color is one of #color_up, #color_down or #color_flat.
+     Exported as:
+       lv_obj_t * stock_row_create(lv_obj_t * parent, const char * symbol,
+                                   const char * full_name, const char * last,
+                                   const char * change, const char * change_pct,
+                                   lv_color_t trend_color);
+     The child objects have names (lbl_last, pill, ...) so C code can find them later with
+     lv_obj_find_by_name(row, "lbl_last"). They differ from the prop names on purpose: an
+     object called "symbol" would become a C variable that hides the "symbol" parameter. -->
+<component>
+	<previews>
+		<preview
+			name="device"
+			width="480"
+			height="76"
+			style_pad_all="0"
+			style_radius="0"
+			style_border_width="0"
+			style_bg_color="#color_bg_screen"
+		/>
+	</previews>
+
+	<api>
+		<prop name="symbol" type="string" default="TICKER" help="B3 ticker without .SA, e.g. VAMO3" />
+		<!-- Not called "name": "name" is already the object name attribute of every widget -->
+		<prop name="full_name" type="string" default="Company name" help="Security name, up to 2 lines, then cut with dots" />
+		<prop name="last" type="string" default="--" help="Last price, 2 decimals" />
+		<prop name="change" type="string" default="--" help="Absolute change with sign, e.g. -0.12" />
+		<prop name="change_pct" type="string" default="--" help="Change % with sign, e.g. -1.88%" />
+		<prop name="trend_color" type="color" default="#color_flat" help="Trend colour: color_up, color_down or color_flat" />
+	</api>
+
+	<!-- Clickable, but not scrollable: a drag scrolls the list, a tap opens the detail screen -->
+	<view extends="box" width="100%" height="#row_height" clickable="true">
+		<style name="style_row" />
+		<style name="style_row_pressed" selector="pressed" />
+
+		<!-- Left column -->
+		<lv_label
+			name="lbl_symbol"
+			text="$symbol"
+			x="#pad_edge"
+			y="10"
+			style_text_font="font_18"
+			style_text_color="#color_gold"
+		/>
+		<!-- 250 wide and 2 lines high: long names wrap once, then end with dots -->
+		<lv_label
+			name="lbl_name"
+			text="$full_name"
+			x="#pad_edge"
+			y="36"
+			width="#name_width"
+			height="#name_height"
+			long_mode="dots"
+			style_text_font="font_12"
+			style_text_color="#color_text_secondary"
+		/>
+
+		<!-- Middle column, right edge at x=344 (480 - 136) -->
+		<lv_label
+			name="lbl_last"
+			text="$last"
+			align="top_right"
+			x="-136"
+			y="10"
+			style_text_font="font_18"
+			style_text_color="#color_text_primary"
+		/>
+		<lv_label
+			name="lbl_change"
+			text="$change"
+			align="top_right"
+			x="-136"
+			y="38"
+			style_text_font="font_12"
+			style_text_color="$trend_color"
+		/>
+
+		<!-- Change % pill, 96x30, right edge at x=464, vertically centred -->
+		<box
+			name="pill"
+			width="#pill_width"
+			height="#pill_height"
+			align="right_mid"
+			x="-16"
+			style_bg_color="$trend_color"
+		>
+			<style name="style_pill" />
+			<lv_label
+				name="lbl_pct"
+				text="$change_pct"
+				align="center"
+				style_text_font="font_14"
+				style_text_color="#color_on_fill"
+			/>
+		</box>
+	</view>
+</component>
