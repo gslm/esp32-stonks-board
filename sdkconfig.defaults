@@ -1,0 +1,58 @@
+# Defaults for the Waveshare ESP32-S3-Touch-LCD-4B (ESP32-S3R8: 8 MB octal PSRAM, 16 MB quad flash).
+# Applied only when no sdkconfig exists yet: after editing, run Full Clean (or delete sdkconfig).
+# Board settings are the same as 01_hello_counter; see that file for the reasoning behind each one.
+
+# --- Flash and partitions ---
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# --- CPU and RTOS ---
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_FREERTOS_HZ=1000
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
+
+# --- PSRAM ---
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+# Code and read-only data run from PSRAM, so the RGB panel keeps refreshing while the watchlist
+# or Wi-Fi settings are written to flash (NVS).
+CONFIG_SPIRAM_XIP_FROM_PSRAM=y
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
+
+# --- Display: no tearing, no extra copy ---
+# Two frame buffers in PSRAM; LVGL draws straight into the hidden one (direct mode) and the panel
+# swaps at the end of each refresh. Measured 19.5 FPS with the list gliding (was 15.6 with a
+# 480-line draw buffer plus copy, 14 with a 100-line buffer).
+CONFIG_BSP_LCD_RGB_BUFFER_NUMS=2
+CONFIG_BSP_DISPLAY_LVGL_AVOID_TEAR=y
+CONFIG_BSP_DISPLAY_LVGL_DIRECT_MODE=y
+# Lets large static buffers (EXT_RAM_BSS_ATTR) live in PSRAM, keeping internal RAM for Wi-Fi and TLS
+CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y
+
+# --- Console ---
+# Logs on both USB-C ports; the command line (stock> prompt) runs on the "USB TO UART" port.
+CONFIG_ESP_CONSOLE_UART_DEFAULT=y
+CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG=y
+
+# --- Networking ---
+# Yahoo's certificate chains to DigiCert Global Root G2, which is in the default bundle.
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+
+# --- LVGL ---
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_CLIB_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+CONFIG_LV_DEF_REFR_PERIOD=15
+# Render on both CPU cores: LVGL's FreeRTOS layer with two software draw units (as in
+# Waveshare's demo)
+CONFIG_LV_OS_FREERTOS=y
+CONFIG_LV_DRAW_SW_DRAW_UNIT_CNT=2
+# GCC 15 (ESP-IDF 6.x) rejects conflicting section attributes when LVGL fast memory uses IRAM
+CONFIG_LV_ATTRIBUTE_FAST_MEM_USE_IRAM=n
+# The UI uses its own Montserrat fonts with accents (main/fonts); 14 stays as LVGL's default font.
+CONFIG_LV_FONT_MONTSERRAT_14=y

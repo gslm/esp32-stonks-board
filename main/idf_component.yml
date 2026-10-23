@@ -1,0 +1,12 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.5"
+  # Board support package: display, touch, backlight, LVGL port. Same pins as 01_hello_counter.
+  waveshare/esp32_s3_touch_lcd_4b:
+    version: "2.0.0"
+  # Exact pin: the BSP accepts lvgl >=8,<10, and 9.6 changes APIs. LVGL Pro designs target 9.5.0 too.
+  lvgl/lvgl:
+    version: "9.5.0"
+  # JSON parser (IDF 6 no longer ships cJSON as a built-in component)
+  espressif/cjson:
+    version: "^1.7.19"
