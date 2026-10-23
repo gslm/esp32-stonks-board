@@ -1,0 +1,21 @@
+# ESP-IDF build output (recreated by idf.py build)
+build/
+
+# Components downloaded by the component manager (versions are pinned in dependencies.lock)
+managed_components/
+
+# Generated from sdkconfig.defaults on the first build. Not tracked because menuconfig can put
+# Wi-Fi defaults (CONFIG_STOCK_WIFI_*) into it.
+sdkconfig
+sdkconfig.old
+
+# Python and editor leftovers
+__pycache__/
+*.pyc
+*.swp
+*~
+.DS_Store
+
+# Per-machine VSCode settings: the ESP-IDF extension writes absolute paths into this file.
+# Start from .vscode/settings.example.json (tracked).
+.vscode/settings.json
