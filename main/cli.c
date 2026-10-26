@@ -130,6 +130,19 @@ static int cmd_refresh(int argc, char **argv)
     return 0;
 }
 
+static int cmd_cbtest(int argc, char **argv)
+{
+    if (argc == 2 && (strcmp(argv[1], "on") == 0 || strcmp(argv[1], "off") == 0)) {
+        model_set_circuit_breaker_test(strcmp(argv[1], "on") == 0);
+    } else if (argc != 1) {
+        printf("Usage: cbtest on|off\n");
+        return 1;
+    }
+    printf("Circuit breaker test: %s (screen shows the circuit breaker: %s)\n",
+           model_circuit_breaker_test() ? "on" : "off", model_circuit_breaker() ? "yes" : "no");
+    return 0;
+}
+
 static int cmd_status(int argc, char **argv)
 {
     app_status_t st;
@@ -173,6 +186,7 @@ void cli_start(void)
         {.command = "interval", .help = "Show or set the refresh interval in seconds (10..3600)", .hint = "[<seconds>]", .func = cmd_interval},
         {.command = "speed", .help = "Show or set the auto-roll speed: 0 (stopped) to 1.0 (one row per second), default 0.3", .hint = "[<x>]", .func = cmd_speed},
         {.command = "refresh", .help = "Fetch all quotes now", .func = cmd_refresh},
+        {.command = "cbtest", .help = "Show or fake a circuit breaker on screen (not saved)", .hint = "[on|off]", .func = cmd_cbtest},
         {.command = "status", .help = "Network, last update, errors, memory", .func = cmd_status},
     };
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {

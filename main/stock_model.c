@@ -37,9 +37,11 @@ typedef struct {
     stock_source_t source;
 } market_item_t;
 
+#define IBOVESPA_SYMBOL "^BVSP" /* also decides the circuit breaker */
+
 /* The "Market" page. DI futures are not on Yahoo; TradingView's public scanner has them. */
 static const market_item_t MARKET[] = {
-    {"^BVSP", "IBOV", "Ibovespa index", STOCK_FMT_INDEX, STOCK_SOURCE_YAHOO},
+    {IBOVESPA_SYMBOL, "IBOV", "Ibovespa index", STOCK_FMT_INDEX, STOCK_SOURCE_YAHOO},
     {"BRL=X", "USD/BRL", "US dollar in Brazilian reais", STOCK_FMT_FX, STOCK_SOURCE_YAHOO},
     {"EWZ", "EWZ", "iShares MSCI Brazil ETF (NYSE, US$)", STOCK_FMT_PRICE, STOCK_SOURCE_YAHOO},
     {"BMFBOVESPA:DI11!", "DI11!", "DI rate futures, nearest contract (% a year)", STOCK_FMT_RATE, STOCK_SOURCE_TRADINGVIEW},
@@ -54,6 +56,7 @@ static int s_count;
 static uint32_t s_list_version;
 static uint32_t s_data_version;
 static app_status_t s_status;
+static bool s_circuit_breaker_test;
 
 #define LOCK()   xSemaphoreTake(s_mutex, portMAX_DELAY)
 #define UNLOCK() xSemaphoreGive(s_mutex)
@@ -237,6 +240,32 @@ void model_set_not_found(const char *symbol)
         s_data_version++;
     }
     UNLOCK();
+}
+
+bool model_circuit_breaker(void)
+{
+    LOCK();
+    int i = find_locked(IBOVESPA_SYMBOL);
+    bool on = s_circuit_breaker_test ||
+              (i >= 0 && s_stocks[i].has_quote && s_stocks[i].change_pct <= CIRCUIT_BREAKER_PCT);
+    UNLOCK();
+    return on;
+}
+
+void model_set_circuit_breaker_test(bool on)
+{
+    LOCK();
+    s_circuit_breaker_test = on;
+    s_data_version++; /* the screen picks it up like a price change */
+    UNLOCK();
+}
+
+bool model_circuit_breaker_test(void)
+{
+    LOCK();
+    bool on = s_circuit_breaker_test;
+    UNLOCK();
+    return on;
 }
 
 void model_get_status(app_status_t *out)

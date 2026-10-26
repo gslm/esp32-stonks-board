@@ -97,6 +97,17 @@ void model_set_detail(const char *symbol, const char *name, double open, double 
                       double volume, const float *series, int series_len);
 void model_set_not_found(const char *symbol);
 
+/*
+ * Circuit breaker: B3 halts trading when the Ibovespa falls 10 % below the previous close
+ * (30 min; at 15 %: 1 h; at 20 %: B3 decides). No free source publishes the halt itself, so this
+ * is true while the Ibovespa is at CIRCUIT_BREAKER_PCT or lower, or while the "cbtest" console
+ * command forces it.
+ */
+#define CIRCUIT_BREAKER_PCT -10.0
+bool model_circuit_breaker(void);
+void model_set_circuit_breaker_test(bool on);
+bool model_circuit_breaker_test(void);
+
 void model_get_status(app_status_t *out);
 void model_set_net_state(net_state_t state);
 void model_set_refresh_result(bool ok, const char *error);
