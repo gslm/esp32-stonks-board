@@ -6,13 +6,15 @@
      The title is the mood of the whole list, from the average change % of the stocks with a
      quote. The firmware switches it at run time: "Stonks!" in #color_up (above 0),
      "Not stonks..." in #color_down (below 0), "Stonks?" in #color_flat (exactly 0, or no data
-     yet, which is also this component's default).
+     yet, which is also this component's default), and "CIRCUIT BREAKER!" in #color_down.
 
      The slider sets the auto-roll speed in tenths: 0 = stopped .. 10 = 1.0x, where 1.0x
      glides one row per second. The readout shows "1.5x", or "Stop" at 0. The design shows
-     the default, 3 and "0.3x". The firmware sets both from its settings and handles the
-     slider's events in C (find them with lv_obj_find_by_name(header, "slider_speed") and
-     "lbl_speed").
+     the default, 3 and "0.3x".
+
+     This is the revision 3 header. The firmware (revision 4 of docs/ui-spec.md) has moved
+     the slider to Settings > Scroll Options (main/ui/ui_settings.c), and shows the gear, a
+     Wi-Fi icon, the update time and a quote banner here instead.
 
      The status text carries its own icon: "&#xF1EB; 16:55" (online, time of the last refresh)
      or "&#xF1EB; ..." (connecting) with LV_SYMBOL_WIFI, "&#xF071; Wi-Fi" (Wi-Fi not configured)
@@ -41,8 +43,9 @@
 	</api>
 
 	<styles>
-		<!-- Speed slider parts, as in the firmware's create_header(). The theme's round ends stay;
-		     its 20% track opacity is replaced, or the track disappears on the header. -->
+		<!-- Speed slider parts, as in the firmware's create_slider() (main/ui/ui_settings.c).
+		     The theme's round ends stay; its 20% track opacity is replaced, or the track
+		     disappears on the header. -->
 		<style name="style_speed_track" bg_color="#color_track" bg_opa="100%" />
 		<style name="style_speed_indicator" bg_color="#color_accent" />
 		<!-- 6 px padding around the 6 px track: an 18 px white knob -->

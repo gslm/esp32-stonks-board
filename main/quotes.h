@@ -4,8 +4,9 @@
  * Data source: Yahoo Finance's public chart endpoints (no API key). B3 quotes there are
  * delayed about 15 minutes, the same as on Investing.com's free pages.
  *   - Every refresh interval: one "spark" request for all symbols -> last price, previous close
- *   - Round-robin, and on demand: one "chart" request per symbol -> open/high/low/volume, name,
- *     and the intraday series for the detail chart
+ *   - One "chart" request per symbol -> open/high/low/volume, name, and the intraday series for
+ *     the detail chart: for every symbol at start-up, then one per refresh (round-robin), and
+ *     on demand when a detail screen opens
  * The DI rate futures (Market page) are not on Yahoo: they come from TradingView's public scanner
  * endpoint, one request per refresh with price, previous close and day range (no chart).
  *

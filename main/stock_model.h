@@ -2,8 +2,8 @@
  * Data model: the watchlist stocks, the market indicators, their latest quotes, and the app status.
  * Both lists are fixed (DEFAULT_STOCKS and MARKET in stock_model.c); edit them there and rebuild.
  *
- * Shared by three tasks (LVGL, quote fetcher, console), so every access goes through a
- * mutex inside this module. Readers take copies (model_snapshot / model_get) and compare
+ * Shared by the LVGL task, the quote fetcher, the console and the Wi-Fi event handlers, so every
+ * access goes through a mutex inside this module. Readers take copies (model_snapshot / model_get) and compare
  * version counters to see whether anything changed since they last looked.
  */
 #pragma once
@@ -80,13 +80,14 @@ typedef struct {
 /* Fills the model with the watchlist and the market indicators (the fixed lists in stock_model.c). */
 void model_init(void);
 
-/*
- * Copies for readers. model_snapshot returns the number of stocks copied (both groups, watchlist first).
- * Symbols match case-insensitively, with or without the ".SA" suffix ("vale3" finds "VALE3.SA").
- */
+/* Copies for readers. model_snapshot returns the number of stocks copied (both groups, watchlist first). */
 int model_snapshot(stock_t *out, int max);
+/*
+ * One stock by its data source symbol. Here and in the model_set_* functions, symbols match
+ * case-insensitively, with or without the ".SA" suffix ("vale3" finds "VALE3.SA").
+ */
 bool model_get(const char *symbol, stock_t *out);
-int model_count(void);
+int model_count(void); /* both groups */
 
 uint32_t model_list_version(void); /* changes when the set of stocks changes (only at start-up today) */
 uint32_t model_data_version(void); /* changes on any change, including prices and status */

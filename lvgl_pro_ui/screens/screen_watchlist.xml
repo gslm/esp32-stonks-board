@@ -2,10 +2,10 @@
      fades. The rows are sample data from the Investing.com "Ativos" list.
      Exported as: lv_obj_t * screen_watchlist_create(void);
 
-     This is the static look only. In the firmware the list is an endless wheel that glides
-     continuously at the header slider's speed; that loop, the timers and the slider's events
-     are C code (main/ui/ui_watchlist.c), so here it is a plain list that
-     stops at the last row. -->
+     This is the static look only, as in revision 3 of docs/ui-spec.md. In the firmware each
+     page's list is an endless wheel that glides continuously at the speed set in Settings >
+     Scroll Options; that loop and its timers are C code (main/ui/ui_watchlist.c), so here it
+     is a plain list that stops at the last row. -->
 <screen>
 	<view scrollable="false">
 		<style name="style_screen" />

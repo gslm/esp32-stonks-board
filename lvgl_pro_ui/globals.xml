@@ -60,7 +60,8 @@
 	     lv_fallback="icons_N_data", the C symbol the export generates for icons_N. A label in
 	     font_N can then mix text and icons, like the firmware's merged fonts. This is the same
 	     setup as the LVGL Pro 2.0.5 "basic" template (font_body -> font_body_symbols_data).
-	     The icon range is the firmware fonts' range: OK F00C, CLOSE F00D, REFRESH F021,
+	     The icon range is the firmware fonts' range, except SETTINGS F013 (the gear), which the
+	     design doesn't use yet: OK F00C, CLOSE F00D, REFRESH F021,
 	     PLAY F04B, PAUSE F04C, LEFT F053, RIGHT F054, PLUS F067, WARNING F071, UP F077,
 	     DOWN F078, KEYBOARD F11C, WIFI F1EB, TRASH F2ED, BACKSPACE F55A, NEW_LINE F8A2.
 	     In XML text write them as &#xF1EB; etc. -->

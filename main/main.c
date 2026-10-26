@@ -1,15 +1,18 @@
 /*
  * Stock watchlist for the Waveshare ESP32-S3-Touch-LCD-4B.
  *
- * Shows the Investing.com "Ativos" watchlist (B3 stocks) with prices from Yahoo Finance,
- * refreshed every 30 s by default, as an endless auto-rolling wheel. Tap a row for details.
- * The serial console ("stock>" prompt on the USB TO UART port) sets up Wi-Fi and shows status.
+ * Two pages, swiped sideways, each an endless auto-rolling wheel: the Investing.com "Ativos"
+ * watchlist (B3 stocks) and market indicators (Ibovespa, dollar, EWZ, DI rate futures). Prices
+ * come from Yahoo Finance and TradingView, refreshed every 30 s by default. Tap a row for
+ * details; the gear opens Settings (Wi-Fi, scrolling, screen). The serial console ("stock>"
+ * prompt on the USB TO UART port) also sets up Wi-Fi and shows status.
  *
  * Tasks:
  *   - LVGL task (esp_lvgl_port, started by the BSP): draws the UI, polls the model every 250 ms
  *   - quotes task: all HTTP requests, writes results into the model
  *   - console task (esp_console REPL): the command line
- * The model (stock_model.c) is the only shared state and has its own mutex.
+ *   - ESP-IDF event loop task: the Wi-Fi handlers, which set the network state in the model
+ * The model (stock_model.c) holds the shared data and has its own mutex.
  */
 #include <stdlib.h>
 #include <time.h>

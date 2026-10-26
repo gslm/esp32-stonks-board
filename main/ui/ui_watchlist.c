@@ -54,7 +54,7 @@ typedef struct {
     lv_obj_t *change;
     lv_obj_t *pill;
     lv_obj_t *pct;
-    char id[STOCK_SYMBOL_LEN]; /* Yahoo symbol the row shows */
+    char id[STOCK_SYMBOL_LEN]; /* data source symbol the row shows */
 } row_t;
 
 /* One page of the main screen: a list of rows that loops endlessly and glides on its own */
