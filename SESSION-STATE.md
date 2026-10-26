@@ -1,7 +1,7 @@
 # Session state
 
 Living checkpoint of in-flight work (see DIRECTIVES.md, rule 6). Keep it short and current.
-Last updated: 2026-10-25.
+Last updated: 2026-10-26.
 
 ## Done
 
@@ -15,20 +15,26 @@ Last updated: 2026-10-25.
   a 480-line draw buffer (slower than direct mode), PSRAM at 120 MHz (needs 120 MHz flash too;
   experimental, not pursued).
 
-## In progress: Settings screen (operator approved 2026-10-25)
+- Settings screen, Wi-Fi profiles and scan (pushed, 2394fb2). Open: Home2 "homeTest" fails with
+  reason 201 (not found), likely weak signal; the operator's scan result is still pending.
+- 2026-10-26, checked by the operator, committed and pushed:
+  - Market page: swipe between "Stocks 1/2" and "Market 2/2". Purple tickers: IBOV (^BVSP),
+    USD/BRL (BRL=X), EWZ (Yahoo), DI11!, DI1F28/29/30 (TradingView public scanner, % a year).
+    Mood title and badges use the stocks only.
+  - Settings > Scroll Options: the speed slider (moved from the main header, both pages) and one
+    auto-scroll checkbox per page (NVS autoscroll0/1, default on). Both pages are endless wheels.
+  - Settings > Screen: brightness 10..100 % (NVS brightness) and "Upside down (180°)" (NVS
+    orientation; the default is the panel turned 180°, ticked = the panel's own orientation).
+    The ST7701 flips itself (SDIR SS + MADCTL ML over a re-created 3-wire SPI IO). 90° dropped.
+  - Touch X correction: the GT911 stretches X near the side edges (measured with crosshair
+    taps); X is squeezed into 20..459 (TOUCH_X_MARGIN in screen.c). Y is accurate.
 
-1. Done: frame-rate monitor off (sdkconfig regenerated from defaults), console quiet.
-2. Done: gear button left of the Wi-Fi status, Settings screen as an lv_tabview, "Wi-Fi" tab.
-3. Done (flashed, not yet tested on screen by the operator; uncommitted): Wi-Fi profiles Work / Home2 / Home3 (SSID shown, password hidden, editable, saved in
-   NVS). Default passwords live in a git-ignored local header, only a template is tracked
-   (the repo is public). Work is used when nothing is saved yet (after a full erase). The
-   `wifi` console command stays as a backup.
+## Next: circuit breaker mode (operator approved 2026-10-26, not started)
 
-4. Done (flashed 2026-10-25, uncommitted): Scan button in the Wi-Fi tab (list also logged),
-   Home3 default SSID "HomeTest_3" (local header only), Wi-Fi icon green/yellow/red + slash.
-   4th profile "Hotspot - Test" added (defaults in the local header only).
-   Open: Home2 "homeTest" fails with reason 201 (not found); once it was briefly connected but
-   HTTPS failed. Likely weak signal; waiting for the operator's scan result.
+Active while Ibovespa is 10 % or more below the previous close. Title "CIRCUIT BREAKER!" in red
++ lightning emoji (Noto 2D 32px, emoji_u26a1); fits now that the header slider is gone. Banner
+turns red and uses `circuit_breaker_quotes.txt` (12 quotes, from the operator). Console
+`cbtest on|off` to simulate.
 
 Note: the console input only works on the USB TO UART port; the USB-OTG port is output only.
 
