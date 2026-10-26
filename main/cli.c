@@ -23,10 +23,18 @@ static const char *TAG = "cli";
 
 EXT_RAM_BSS_ATTR static stock_t s_list[STOCK_MAX];
 
-static void print_value(double v, bool valid, const char *suffix)
+/* Decimals of the price and change for each stock_format_t, as on screen (ui_theme.c) */
+static const int DECIMALS[] = {
+    [STOCK_FMT_PRICE] = 2,
+    [STOCK_FMT_INDEX] = 0,
+    [STOCK_FMT_FX] = 4,
+    [STOCK_FMT_RATE] = 2,
+};
+
+static void print_value(double v, bool valid, int decimals, const char *suffix)
 {
     if (valid && !isnan(v)) {
-        printf("%9.2f%s", v, suffix);
+        printf("%9.*f%s", decimals, v, suffix);
     } else {
         printf("%9s%s", "--", suffix[0] == '%' ? " " : suffix);
     }
@@ -44,9 +52,10 @@ static int cmd_list(int argc, char **argv)
         }
         stocks += s->group == STOCK_GROUP_WATCHLIST;
         printf("%-8s ", s->ticker);
-        print_value(s->last, s->has_quote, " ");
-        print_value(s->change, s->has_quote, " ");
-        print_value(s->change_pct, s->has_quote, "%");
+        int decimals = DECIMALS[s->format];
+        print_value(s->last, s->has_quote, decimals, s->format == STOCK_FMT_RATE ? "%" : " ");
+        print_value(s->change, s->has_quote, decimals, " ");
+        print_value(s->change_pct, s->has_quote, 2, "%");
         printf("  %s%s\n", s->name, s->not_found ? "  [no data at the source]" : "");
     }
     printf("%d stocks, %d market rows\n", stocks, n - stocks);
@@ -162,7 +171,7 @@ static int cmd_status(int argc, char **argv)
     }
     printf("Error:     %s\n", st.error[0] ? st.error : "none");
     printf("Interval:  %d s\n", settings_get_refresh_s());
-    printf("Stocks:    %d\n", model_count());
+    printf("Rows:      %d (stocks and market)\n", model_count());
     printf("Heap:      internal %u free (largest block %u), PSRAM %u free\n",
            (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
            (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
