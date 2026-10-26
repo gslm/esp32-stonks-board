@@ -24,6 +24,7 @@ void ui_init(void)
     ui_theme_init(lv_display_get_default());
     ui_watchlist_create();
     ui_detail_create();
+    ui_settings_create();
     lv_screen_load(ui_watchlist_screen());
     ui_tick(NULL);
     lv_timer_create(ui_tick, UI_POLL_MS, NULL);

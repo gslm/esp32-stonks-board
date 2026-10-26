@@ -39,7 +39,9 @@
 #define KICK_TICK_MS    100
 #define TOUCH_RESUME_MS 5000 /* auto-roll waits this long after the list was last touched */
 #define SLIDER_X        216 /* leaves room for "Not stonks..." plus its chart icon */
-#define SLIDER_W        116
+#define SLIDER_W        84  /* leaves room for the gear button */
+#define GEAR_X          352
+#define WIFI_ICON_X     402
 
 typedef struct {
     lv_obj_t *row;
@@ -56,7 +58,9 @@ typedef struct {
 static lv_obj_t *s_screen;
 static lv_obj_t *s_title;
 static lv_obj_t *s_title_icon; /* chart up or down, after the title */
-static lv_obj_t *s_status;
+static lv_obj_t *s_wifi_icon;  /* green: online, yellow: Wi-Fi but no internet, red + slash: no Wi-Fi */
+static lv_obj_t *s_wifi_slash;
+static lv_obj_t *s_update_time; /* time of the last successful refresh */
 static lv_obj_t *s_speed_slider;
 static lv_obj_t *s_speed_label;
 static lv_obj_t *s_list;
@@ -185,6 +189,11 @@ static void kick_tick(lv_timer_t *timer)
 /* Widgets                                                                                         */
 /* ---------------------------------------------------------------------------------------------- */
 
+static void on_gear_clicked(lv_event_t *e)
+{
+    ui_settings_open();
+}
+
 static void on_row_clicked(lv_event_t *e)
 {
     const row_t *row = lv_event_get_user_data(e);
@@ -227,9 +236,35 @@ static void create_header(void)
     lv_obj_set_pos(s_speed_label, SLIDER_X + SLIDER_W + 14, 8);
     show_speed(settings_get_roll_speed());
 
-    s_status = ui_label_create(header, &font_14, UI_TEXT_SECONDARY);
-    lv_label_set_text(s_status, "");
-    lv_obj_align(s_status, LV_ALIGN_TOP_RIGHT, -16, 8);
+    /* Gear: opens the Settings screen. Transparent 32x32 button with a larger touch area */
+    lv_obj_t *gear = lv_button_create(header);
+    lv_obj_set_size(gear, 32, 32);
+    lv_obj_set_pos(gear, GEAR_X, 1);
+    lv_obj_set_style_bg_opa(gear, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_shadow_width(gear, 0, 0);
+    lv_obj_set_style_pad_all(gear, 0, 0);
+    lv_obj_set_ext_click_area(gear, 8);
+    lv_obj_add_event_cb(gear, on_gear_clicked, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *gear_icon = ui_label_create(gear, &font_24, UI_TEXT_SECONDARY);
+    lv_label_set_text(gear_icon, LV_SYMBOL_SETTINGS);
+    lv_obj_center(gear_icon);
+
+    /* Wi-Fi state icon at a fixed spot, with a red slash drawn over it when there is no Wi-Fi */
+    s_wifi_icon = ui_label_create(header, &font_14, UI_DOWN);
+    lv_label_set_text(s_wifi_icon, LV_SYMBOL_WIFI);
+    lv_obj_set_pos(s_wifi_icon, WIFI_ICON_X, 8);
+
+    static const lv_point_precise_t SLASH[] = {{0, 17}, {20, 0}};
+    s_wifi_slash = lv_line_create(header);
+    lv_line_set_points(s_wifi_slash, SLASH, 2);
+    lv_obj_set_pos(s_wifi_slash, WIFI_ICON_X - 1, 8);
+    lv_obj_set_style_line_width(s_wifi_slash, 2, 0);
+    lv_obj_set_style_line_color(s_wifi_slash, UI_DOWN, 0);
+    lv_obj_set_style_line_rounded(s_wifi_slash, true, 0);
+
+    s_update_time = ui_label_create(header, &font_14, UI_TEXT_SECONDARY);
+    lv_label_set_text(s_update_time, "--");
+    lv_obj_align(s_update_time, LV_ALIGN_TOP_RIGHT, -16, 8);
 }
 
 static void create_captions(void)
@@ -416,24 +451,19 @@ static void update_status(void)
 {
     app_status_t st;
     model_get_status(&st);
-    char buf[32];
     char time_buf[12];
 
-    if (st.net == NET_NOT_CONFIGURED) {
-        ui_set_text(s_status, LV_SYMBOL_WARNING " Wi-Fi");
-        lv_obj_set_style_text_color(s_status, UI_DOWN, 0);
-    } else if (st.net == NET_CONNECTING) {
-        ui_set_text(s_status, LV_SYMBOL_WIFI " ...");
-        lv_obj_set_style_text_color(s_status, UI_TEXT_SECONDARY, 0);
-    } else if (st.error[0]) {
-        ui_set_text(s_status, LV_SYMBOL_WARNING " Error");
-        lv_obj_set_style_text_color(s_status, UI_DOWN, 0);
+    bool wifi = st.net == NET_ONLINE;
+    bool internet = wifi && st.last_update != 0 && st.error[0] == '\0'; /* last refresh worked */
+    lv_obj_set_style_text_color(s_wifi_icon, !wifi ? UI_DOWN : (internet ? UI_UP : UI_GOLD), 0);
+    if (wifi) {
+        lv_obj_add_flag(s_wifi_slash, LV_OBJ_FLAG_HIDDEN);
     } else {
-        ui_fmt_time(time_buf, sizeof(time_buf), st.last_update, false);
-        snprintf(buf, sizeof(buf), LV_SYMBOL_WIFI " %s", time_buf);
-        ui_set_text(s_status, buf);
-        lv_obj_set_style_text_color(s_status, UI_TEXT_SECONDARY, 0);
+        lv_obj_remove_flag(s_wifi_slash, LV_OBJ_FLAG_HIDDEN);
     }
+
+    ui_fmt_time(time_buf, sizeof(time_buf), st.last_update, false);
+    ui_set_text(s_update_time, time_buf);
 }
 
 lv_obj_t *ui_watchlist_create(void)

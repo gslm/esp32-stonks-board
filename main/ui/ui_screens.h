@@ -10,6 +10,9 @@ lv_obj_t *ui_watchlist_screen(void);
 /* Rolling message strip under the title (ui_banner.c) */
 void ui_banner_create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width);
 
+void ui_settings_create(void);
+void ui_settings_open(void);
+
 void ui_detail_create(void);
 void ui_detail_open(const char *symbol);
 void ui_detail_update(void);

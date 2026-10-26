@@ -12,6 +12,7 @@ idf_component_register(
         "ui/ui_watchlist.c"
         "ui/ui_detail.c"
         "ui/ui_banner.c"
+        "ui/ui_settings.c"
         "images/img_chart_up.c"
         "images/img_chart_down.c"
         "images/img_moneybag.c"
