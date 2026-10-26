@@ -19,6 +19,7 @@ idf_component_register(
         "images/img_moneybag.c"
         "images/img_money_wings.c"
         "images/img_tophat.c"
+        "images/img_lightning.c"
         "fonts/font_12.c"
         "fonts/font_14.c"
         "fonts/font_16.c"
@@ -27,7 +28,7 @@ idf_component_register(
         "fonts/font_24.c"
         "fonts/font_40.c"
     INCLUDE_DIRS "." "ui"
-    EMBED_TXTFILES "../money_quotes.txt")
+    EMBED_TXTFILES "../money_quotes.txt" "../circuit_breaker_quotes.txt")
 
 # Images made by LVGL's LVGLImage.py include "lvgl.h" only when this is defined
 target_compile_definitions(${COMPONENT_LIB} PRIVATE LV_LVGL_H_INCLUDE_SIMPLE)

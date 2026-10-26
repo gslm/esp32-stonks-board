@@ -38,6 +38,7 @@ LV_IMAGE_DECLARE(img_chart_down);
 LV_IMAGE_DECLARE(img_moneybag);
 LV_IMAGE_DECLARE(img_money_wings);
 LV_IMAGE_DECLARE(img_tophat);
+LV_IMAGE_DECLARE(img_lightning);
 
 void ui_theme_init(lv_display_t *disp);
 

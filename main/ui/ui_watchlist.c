@@ -412,7 +412,8 @@ static void update_badges(const stock_t *list, int n)
     }
 }
 
-/* "Stonks!" when the stocks are up on average, "Not stonks..." when down */
+/* "Stonks!" when the stocks are up on average, "Not stonks..." when down, and
+   "CIRCUIT BREAKER!" when the Ibovespa has fallen far enough for B3 to halt trading */
 static void update_title(const stock_t *list, int n)
 {
     double sum = 0;
@@ -427,7 +428,13 @@ static void update_title(const stock_t *list, int n)
     const char *text = "Stonks?";
     lv_color_t color = UI_FLAT;
     const lv_image_dsc_t *icon = NULL;
-    if (count > 0 && average >= 0.005) {
+    bool circuit_breaker = model_circuit_breaker();
+    ui_banner_set_alert(circuit_breaker);
+    if (circuit_breaker) {
+        text = "CIRCUIT BREAKER!";
+        color = UI_DOWN;
+        icon = &img_lightning;
+    } else if (count > 0 && average >= 0.005) {
         text = "Stonks!";
         color = UI_UP;
         icon = &img_chart_up;

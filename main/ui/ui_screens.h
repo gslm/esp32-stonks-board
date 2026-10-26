@@ -9,6 +9,8 @@ lv_obj_t *ui_watchlist_screen(void);
 
 /* Rolling message strip under the title (ui_banner.c) */
 void ui_banner_create(lv_obj_t *parent, int32_t x, int32_t y, int32_t width);
+/* Circuit breaker quotes in red when on, the usual gold ones when off */
+void ui_banner_set_alert(bool on);
 
 void ui_settings_create(void);
 void ui_settings_open(void);
