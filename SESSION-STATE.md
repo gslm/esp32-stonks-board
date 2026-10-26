@@ -29,12 +29,9 @@ Last updated: 2026-10-26.
   - Touch X correction: the GT911 stretches X near the side edges (measured with crosshair
     taps); X is squeezed into 20..459 (TOUCH_X_MARGIN in screen.c). Y is accurate.
 
-## Next: circuit breaker mode (operator approved 2026-10-26, not started)
-
-Active while Ibovespa is 10 % or more below the previous close. Title "CIRCUIT BREAKER!" in red
-+ lightning emoji (Noto 2D 32px, emoji_u26a1); fits now that the header slider is gone. Banner
-turns red and uses `circuit_breaker_quotes.txt` (12 quotes, from the operator). Console
-`cbtest on|off` to simulate.
+- Circuit breaker mode (2026-10-26, checked by the operator with `cbtest on`): while IBOV is at
+  -10 % or lower, red "CIRCUIT BREAKER!" title + lightning emoji, red banner with quotes from
+  `circuit_breaker_quotes.txt`. Commit commands given to the operator, who commits and pushes.
 
 Note: the console input only works on the USB TO UART port; the USB-OTG port is output only.
 

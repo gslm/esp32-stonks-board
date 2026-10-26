@@ -17,6 +17,10 @@ Yahoo Finance refreshed every 30 s, plus a second page of market indicators.
 - **The title gets a chart icon:** up for "Stonks!", down for "Not stonks...".
 - **Badges after the ticker:** the day's best performer gets a money bag above +2%, or a top hat above +10%. The worst performer gets flying money below -2%. The thresholds are `MONEYBAG_PCT`, `TOPHAT_PCT` and `LOSER_PCT` in `main/ui/ui_watchlist.c`.
 - **A gold banner** along the bottom of the top bar scrolls a random quote from `money_quotes.txt` (one per line). A new quote is picked each time one has scrolled off. The file is built into the firmware, so edit it and rebuild.
+- **Circuit breaker:** B3 halts trading when the Ibovespa falls 10 % below the previous close.
+  While IBOV is at -10 % or lower, the title reads "CIRCUIT BREAKER!" in red with a lightning
+  emoji, and the banner turns red with quotes from `circuit_breaker_quotes.txt`. No free source
+  publishes the halt itself, so this follows the index. `cbtest on` fakes one for testing.
 - **Tap a row** to see the day range, volume and an intraday chart (no chart for the DI futures).
 - **The Wi-Fi icon** (top right) is green when online, yellow when on Wi-Fi without internet (the last refresh failed), and red with a slash when not connected.
 - **The gear button** (top right) opens Settings:
@@ -118,6 +122,7 @@ The `stock>` prompt runs on the **USB TO UART** port. The USB-OTG port shows the
 | `interval 15` | Refresh every 15 s (10..3600) |
 | `speed 0.5` | Glide speed, 0 (stopped) to 1.0 (one row per second). The slider in Settings > Scroll Options follows it. Saved |
 | `refresh` | Fetch now |
+| `cbtest on` / `cbtest off` | Fake a circuit breaker on screen, or end the fake one (not saved) |
 | `status` | Network, last update, errors, free memory |
 
 ## Data source and limits
@@ -166,6 +171,6 @@ The `stock>` prompt runs on the **USB TO UART** port. The USB-OTG port shows the
 
 ## Credits
 
-Emoji images in `main/images/` (chart up, chart down, money bag, flying money, top hat) are from
+Emoji images in `main/images/` (chart up, chart down, money bag, flying money, top hat, lightning) are from
 [Noto Emoji](https://github.com/googlefonts/noto-emoji) (`2D/png/32`), Apache License 2.0. They were
 converted with LVGL's `scripts/LVGLImage.py --ofmt C --cf RGB565A8`.
