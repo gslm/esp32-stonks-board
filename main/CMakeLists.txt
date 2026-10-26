@@ -6,6 +6,7 @@ idf_component_register(
         "wifi.c"
         "quotes.c"
         "cli.c"
+        "screen.c"
         "banner_messages.c"
         "ui/ui.c"
         "ui/ui_theme.c"

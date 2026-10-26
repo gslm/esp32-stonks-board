@@ -19,6 +19,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "quotes.h"
+#include "screen.h"
 #include "stock_model.h"
 #include "ui.h"
 #include "wifi.h"
@@ -57,8 +58,8 @@ void app_main(void)
         ESP_LOGE(TAG, "Display initialization failed");
         return;
     }
-    bsp_display_brightness_set(100);
     bsp_display_lock(0);
+    screen_init(); /* saved brightness and orientation */
     ui_init();
     bsp_display_unlock();
     log_memory("after display init");
