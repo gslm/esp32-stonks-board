@@ -1,6 +1,6 @@
 # Defaults for the Waveshare ESP32-S3-Touch-LCD-4B (ESP32-S3R8: 8 MB octal PSRAM, 16 MB quad flash).
 # Applied only when no sdkconfig exists yet: after editing, run Full Clean (or delete sdkconfig).
-# Board settings are the same as 01_hello_counter; see that file for the reasoning behind each one.
+# The reasoning behind each block is in docs/firmware-guide.md, section 1.
 
 # --- Flash and partitions ---
 CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
@@ -18,8 +18,8 @@ CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y
-# Code and read-only data run from PSRAM, so the RGB panel keeps refreshing while the watchlist
-# or Wi-Fi settings are written to flash (NVS).
+# Code and read-only data run from PSRAM, so the RGB panel keeps refreshing while settings or
+# Wi-Fi profiles are written to flash (NVS).
 CONFIG_SPIRAM_XIP_FROM_PSRAM=y
 CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
 

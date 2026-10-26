@@ -4,8 +4,8 @@ build/
 # Components downloaded by the component manager (versions are pinned in dependencies.lock)
 managed_components/
 
-# Generated from sdkconfig.defaults on the first build. Not tracked because menuconfig can put
-# Wi-Fi defaults (CONFIG_STOCK_WIFI_*) into it.
+# Generated from sdkconfig.defaults on the first build, which is the tracked source of the
+# configuration. menuconfig changes land here; copy the ones to keep into sdkconfig.defaults.
 sdkconfig
 sdkconfig.old
 

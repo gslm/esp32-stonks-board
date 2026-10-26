@@ -179,7 +179,7 @@ void wifi_start(void)
     }
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    /* Clock for the "Updated hh:mm:ss" label; the time zone is set in app_main */
+    /* Clock for the update time in the header; the time zone is set in app_main */
     esp_sntp_config_t sntp = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
     esp_netif_sntp_init(&sntp);
 }
