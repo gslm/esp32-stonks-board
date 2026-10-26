@@ -1,8 +1,9 @@
 # LVGL Pro Editor: first steps with the stock watchlist design
 
-`lvgl_pro_ui/` is an LVGL Pro Editor 2.0.x project that draws the same two screens as the
-hand-written firmware in `main/ui/`. Both follow [`ui-spec.md`](ui-spec.md)
-(revision 3).
+`lvgl_pro_ui/` is an LVGL Pro Editor 2.0.x project that draws the main (watchlist) and detail
+screens of the hand-written firmware in `main/ui/`. It follows revision 3 of
+[`ui-spec.md`](ui-spec.md); the firmware has moved on to revision 4, so the design is behind it
+(see "Known differences" at the end).
 This guide covers opening the project, how it matches the device, a first exercise, what
 the export produces, and how the export will go into the firmware.
 
@@ -85,7 +86,8 @@ uses `icons_20` directly. In XML text, write the code point as a character refer
 | LEFT | F053 | `&#xF053;` |
 
 The icon fonts also have OK, CLOSE, PLAY, PAUSE, RIGHT, PLUS, TRASH, KEYBOARD, BACKSPACE,
-NEW_LINE, REFRESH, UP and DOWN, the same set as the firmware fonts. To add another symbol, look
+NEW_LINE, REFRESH, UP and DOWN. The firmware fonts also have SETTINGS (F013, the gear), which
+the design doesn't use yet. To add another symbol, look
 up its code in `lvgl/src/font/lv_symbol_def.h` and add it to the `range` of all seven `icons_N` fonts.
 
 **Kconfig options the exported code needs.** Set them with `idf.py menuconfig` >
@@ -173,12 +175,15 @@ See [Using exported C code](https://lvgl.io/docs/pro/integration/using-exported-
 
 The plan, not done yet.
 
-**The wheel stays in C.** The firmware shows the list as an endless wheel: it glides
-continuously at the header slider's speed (stopped .. 1.0x), pauses while touched and resumes
-5 s after the last touch. That is C code in `main/ui/ui_watchlist.c`, which moves rows between
-the two ends of the list as it scrolls. A static design can't show it, so the export only
-provides the widgets: `list` (flex column, no scroll bar, rows snap to the top), the rows, the
-fades and the slider. Keep the wheel code and point it at the exported `list`.
+**First bring the design up to revision 4** of the spec (see "Known differences" at the end).
+Exporting the design as it is would bring back the revision 3 look.
+
+**The wheel stays in C.** The firmware shows each page's list as an endless wheel: it glides
+continuously at the speed set in Settings > Scroll Options (stopped .. 1.0x), pauses while
+touched and resumes 5 s after the last touch. That is C code in `main/ui/ui_watchlist.c`, which
+moves rows between the two ends of the list as it scrolls. A static design can't show it, so the
+export only provides the widgets: `list` (flex column, no scroll bar, rows snap to the top), the
+rows and the fades. Keep the wheel code and point it at the exported `list`.
 
 1. Enable `CONFIG_LV_USE_OBJ_NAME=y`, with menuconfig or by adding it to `sdkconfig.defaults`
    and deleting `sdkconfig` so it is regenerated.
@@ -239,12 +244,12 @@ fades and the slider. Keep the wheel code and point it at the exported `list`.
    bsp_display_unlock();
    ```
    The title works the same way: `lv_label_set_text()` on `lbl_title` with "Stonks!",
-   "Not stonks..." or "Stonks?", and its text colour set to `COLOR_UP`, `COLOR_DOWN` or
-   `COLOR_FLAT`. Events stay in C as well:
-   `lv_obj_add_event_cb(row, on_row_clicked, LV_EVENT_CLICKED, ...)`, and `on_speed_changed` on
-   `slider_speed` for `LV_EVENT_VALUE_CHANGED` and `LV_EVENT_RELEASED`, which sets the roll speed
-   and the `lbl_speed` text ("1.5x", or "Stop" at 0). The design's value is 3 ("0.3x"), so set
-   the slider and the readout from the saved speed after creating the screen.
+   "Not stonks...", "Stonks?" or "CIRCUIT BREAKER!", and its text colour set to `COLOR_UP`,
+   `COLOR_DOWN` or `COLOR_FLAT`. Events stay in C as well:
+   `lv_obj_add_event_cb(row, on_row_clicked, LV_EVENT_CLICKED, ...)`.
+   The design's header still has the revision 3 speed slider (`slider_speed`, `lbl_speed`). The
+   firmware moved it to Settings > Scroll Options, which is hand-written and not part of the
+   design, so drop it from `app_header` when bringing the design up to date.
 6. For smooth fades, delete the bands from C (`lv_obj_clean(fade_top)`) and give `fade_top` and
    `fade_bottom` the gradient that `ui_watchlist.c` uses: `bg_grad_dir` ver, `bg_color` and
    `bg_grad_color` `COLOR_BG_SCREEN`, plus `lv_obj_set_style_bg_main_opa()` /
@@ -265,10 +270,28 @@ fades and the slider. Keep the wheel code and point it at the exported `list`.
 | Firmware: `multiple definition of font_14` | Remove the old `main/fonts/font_*.c` (step e.3). |
 | Firmware: undefined `lv_translation_*` | The export emits translation code for a `translations.xml` (this project has none). Delete that file, or enable `CONFIG_LV_USE_TRANSLATION`. |
 
-**Known differences from the firmware.** The list is a plain list that stops at the last row,
-not the endless gliding wheel (section e). The edge fades are stacks of bands (6 for the
-12 px top fade, 8 for the 40 px bottom one) with falling opacity, not smooth gradients: the
-v9.5.0 schema has `bg_grad_dir` and `bg_grad_color` but no `bg_main_opa` or `bg_grad_opa`, so
-an XML style can only blend two opaque colours. The `<gradients>` block in the
-[Styles](https://lvgl.io/docs/pro/syntax/styles) docs isn't in the schema either, and the docs
-say the preview doesn't render it.
+**Known differences from the firmware.**
+
+- **The design follows ui-spec revision 3; the firmware is at revision 4.** Missing from the
+  design:
+  - the revision 4 header: the emoji icon after the title, the gear button, the Wi-Fi icon with
+    its slash, the time of the last refresh, and the rolling quote banner. The design still has
+    the speed slider and the status label there;
+  - the "CIRCUIT BREAKER!" title (only a comment lists the title texts);
+  - the Market page: the tileview with two pages, the purple tickers (`0xA371F7`) and the page
+    name in the middle of the captions;
+  - the bigger rows: 92 px high, ticker and price in `font_24`, the name in `font_14` at y=42,
+    the change in `font_16` at y=46, and a 112x40 pill with black `font_20` text;
+  - the emoji badges and title icons (`main/images/`): the design has no images yet;
+  - the Settings screen;
+  - SETTINGS (F013, the gear) in the icon fonts;
+  - the sample rows still show CPLE6 "COPEL Pref B", which the firmware list has as CPLE3
+    "COPEL ON".
+- **The list is a plain list** that stops at the last row, not the endless gliding wheel
+  (section e).
+- **The edge fades are stacks of bands** (6 for the 12 px top fade, 8 for the 40 px bottom one)
+  with falling opacity, not smooth gradients: the v9.5.0 schema has `bg_grad_dir` and
+  `bg_grad_color` but no `bg_main_opa` or `bg_grad_opa`, so an XML style can only blend two
+  opaque colours. The `<gradients>` block in the
+  [Styles](https://lvgl.io/docs/pro/syntax/styles) docs isn't in the schema either, and the docs
+  say the preview doesn't render it.

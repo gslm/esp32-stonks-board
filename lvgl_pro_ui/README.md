@@ -1,7 +1,9 @@
 # stock_ui: LVGL Pro design of the stock watchlist
 
-An LVGL Pro Editor 2.0.x project with the same UI as the hand-written firmware in
-`main/ui/`. Both follow [`docs/ui-spec.md`](../docs/ui-spec.md).
+An LVGL Pro Editor 2.0.x project with the main (watchlist) and detail screens of the
+hand-written firmware in `main/ui/`. It follows revision 3 of
+[`docs/ui-spec.md`](../docs/ui-spec.md), so it is behind the firmware (revision 4): see
+"Known differences" in [`docs/lvgl-pro-guide.md`](../docs/lvgl-pro-guide.md).
 Target: Waveshare ESP32-S3-Touch-LCD-4B, 480x480, RGB565, LVGL 9.5.0.
 
 New to the editor? Read [`docs/lvgl-pro-guide.md`](../docs/lvgl-pro-guide.md) first.
