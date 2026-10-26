@@ -1,7 +1,8 @@
-# 02_stock_watchlist
+# esp32-stonks-board
 
 Shows the Investing.com "Ativos" watchlist (13 B3 tickers) on the 480x480 screen, with prices from
-Yahoo Finance refreshed every 30 s, plus a second page of market indicators.
+Yahoo Finance refreshed every 30 s, plus a second page of market indicators. Firmware for the
+Waveshare ESP32-S3-Touch-LCD-4B, in ESP-IDF and LVGL.
 
 - **Two pages:** swipe left or right between "Stocks 1/2" (the watchlist, gold tickers) and
   "Market 2/2" (purple tickers). The page name is in the middle of the column captions.
@@ -13,16 +14,16 @@ Yahoo Finance refreshed every 30 s, plus a second page of market indicators.
     sets the speed too.
   - Drag a list to scroll by hand; it also loops endlessly and snaps to a row.
   - Touching a list pauses its glide, which resumes 5 s later.
-- **The title shows the mood.** It reads "Stonks!" in green when the average change % of the stocks is positive, and "Not stonks..." in red when it's negative. The Market page doesn't count.
+- **The title shows the mood.** It reads "Stonks!" in green when the average change % of the stocks is positive, "Not stonks..." in red when it's negative, and "Stonks?" in grey when it's flat or before data arrives. The Market page doesn't count.
 - **The title gets a chart icon:** up for "Stonks!", down for "Not stonks...".
-- **Badges after the ticker:** the day's best performer gets a money bag above +2%, or a top hat above +10%. The worst performer gets flying money below -2%. The thresholds are `MONEYBAG_PCT`, `TOPHAT_PCT` and `LOSER_PCT` in `main/ui/ui_watchlist.c`.
-- **A gold banner** along the bottom of the top bar scrolls a random quote from `money_quotes.txt` (one per line). A new quote is picked each time one has scrolled off. The file is built into the firmware, so edit it and rebuild.
+- **Badges after the ticker** (Stocks page): the day's best performer gets a money bag above +2%, or a top hat above +10%. The worst performer gets flying money below -2%. The thresholds are `MONEYBAG_PCT`, `TOPHAT_PCT` and `LOSER_PCT` in `main/ui/ui_watchlist.c`.
+- **A rolling banner** along the bottom of the top bar scrolls a random quote from `money_quotes.txt` (one per line) in gold. A new quote is picked each time one has scrolled off. The file is built into the firmware, so edit it and rebuild.
 - **Circuit breaker:** B3 halts trading when the Ibovespa falls 10 % below the previous close.
   While IBOV is at -10 % or lower, the title reads "CIRCUIT BREAKER!" in red with a lightning
-  emoji, and the banner turns red with quotes from `circuit_breaker_quotes.txt`. No free source
+  emoji, and the banner shows quotes from `circuit_breaker_quotes.txt` in red. No free source
   publishes the halt itself, so this follows the index. `cbtest on` fakes one for testing.
 - **Tap a row** to see the day range, volume and an intraday chart (no chart for the DI futures).
-- **The Wi-Fi icon** (top right) is green when online, yellow when on Wi-Fi without internet (the last refresh failed), and red with a slash when not connected.
+- **The Wi-Fi icon** (top right) is green when online, yellow when on Wi-Fi but no refresh has worked yet or the last one failed (no internet), and red with a slash when not connected. Next to it is the time of the last successful refresh.
 - **The gear button** (top right) opens Settings:
   - Wi-Fi: the connection, plus four Wi-Fi profiles (Work, Home2, Home3, Hotspot - Test): tap one to connect, or Edit to change its network and password.
   - Scroll Options: see above.
@@ -31,7 +32,15 @@ Yahoo Finance refreshed every 30 s, plus a second page of market indicators.
 
 The watchlist and the market rows are fixed in `main/stock_model.c` (`DEFAULT_STOCKS`, `MARKET`); edit them there and rebuild.
 
-The layout follows [docs/ui-spec.md](docs/ui-spec.md).
+## Docs
+
+| File | What's in it |
+| --- | --- |
+| [docs/firmware-guide.md](docs/firmware-guide.md) | How the firmware works and why it is built that way, for learning ESP-IDF and LVGL from this code |
+| [docs/ui-spec.md](docs/ui-spec.md) | The visual spec: colours, fonts, number formats, and the layout of every screen |
+| [docs/lvgl-pro-guide.md](docs/lvgl-pro-guide.md) | The LVGL Pro design project, and how its export would go into the firmware |
+| [docs/research-notes.md](docs/research-notes.md) | The early research (2026-10-22): board facts, UI tools, data sources |
+| `DIRECTIVES.md`, `SESSION-STATE.md` | Working rules and in-flight state for AI-assisted sessions |
 
 ## Set up a new workstation
 
@@ -49,8 +58,8 @@ Tested on Ubuntu Linux with the versions below.
    ```bash
    # new workstation
    cd ~
-   git clone <repo-url> 02_stock_watchlist
-   cd ~/02_stock_watchlist
+   git clone https://github.com/gslm/esp32-stonks-board.git
+   cd ~/esp32-stonks-board
    source ~/.espressif/tools/activate_idf_v6.0.1.sh
    idf.py set-target esp32s3
    idf.py build
@@ -62,7 +71,7 @@ Tested on Ubuntu Linux with the versions below.
 
    ```bash
    # new workstation
-   cd ~/02_stock_watchlist
+   cd ~/esp32-stonks-board
    cp .vscode/settings.example.json .vscode/settings.json
    ```
 
@@ -74,14 +83,15 @@ Tested on Ubuntu Linux with the versions below.
 
    ```bash
    # new workstation
-   cd ~/02_stock_watchlist
+   cd ~/esp32-stonks-board
    cp main/wifi_profiles_local.example.h main/wifi_profiles_local.h
    ```
 
    Without it the firmware still builds, but the profiles start empty; you can then set them
    on the device (Settings > Wi-Fi > Edit).
 6. **Optional, Node.js:** only needed to regenerate `main/fonts/` with `tools/gen_fonts.sh`.
-   The generated fonts are committed.
+   The generated fonts are committed. The script takes the source fonts from
+   `managed_components/`, so build once (or run `idf.py reconfigure`) before running it.
 7. **Optional, LVGL Pro Editor 2.0.5** (UI design project in `lvgl_pro_ui/`):
    - Download the Linux AppImage from lvgl.io
      ([installation guide](https://lvgl.io/docs/pro/editor/installation)). The free Community
@@ -119,17 +129,18 @@ The `stock>` prompt runs on the **USB TO UART** port. The USB-OTG port shows the
 | --- | --- |
 | `list` | Watchlist and market rows with last price, change and change % |
 | `wifi` / `wifi "ssid" "pass"` | Show the Wi-Fi status / set new credentials for the active profile |
-| `interval 15` | Refresh every 15 s (10..3600) |
+| `interval 15` | Refresh every 15 s (10..3600). Saved |
 | `speed 0.5` | Glide speed, 0 (stopped) to 1.0 (one row per second). The slider in Settings > Scroll Options follows it. Saved |
 | `refresh` | Fetch now |
 | `cbtest on` / `cbtest off` | Fake a circuit breaker on screen, or end the fake one (not saved) |
 | `status` | Network, last update, errors, free memory |
+| `help` | All commands |
 
 ## Data source and limits
 
 - **Source:** Yahoo Finance's public chart endpoints. They need no account or API key.
   - Every refresh, one request gets the last price and previous close for all symbols, about 3 KB.
-  - Per-symbol requests, round-robin and when a detail screen opens, get open/high/low/volume and the 15-minute intraday series.
+  - Per-symbol requests get open/high/low/volume and the 15-minute intraday series: one for every symbol at start-up, then one per refresh, round-robin, and one when a detail screen opens.
 - **DI rate futures:** Yahoo doesn't have them. They come from TradingView's public scanner
   endpoint (no account or key), one request per refresh, also about 15 minutes delayed.
 - **Delay:** B3 prices on Yahoo are about **15 minutes delayed**. Investing.com's free pages are delayed the same way (the red clock icon), and free real-time B3 data doesn't exist. Refreshing more often than every 30 s only picks up the delayed feed sooner.
@@ -139,15 +150,18 @@ The `stock>` prompt runs on the **USB TO UART** port. The USB-OTG port shows the
 
 | File | Role |
 | --- | --- |
-| `main/main.c` | Startup order: NVS, model, display + UI, Wi-Fi, quote fetcher, console |
+| `main/main.c` | Startup order: NVS, time zone, model, display (saved brightness and orientation) + UI, Wi-Fi, quote fetcher, console |
 | `main/stock_model.c` | The watchlist (`DEFAULT_STOCKS`) and its quotes, shared by all tasks behind one mutex |
 | `main/quotes.c` | The only task that talks to the network: HTTPS (`esp_http_client` + certificate bundle) and JSON parsing (cJSON) |
 | `main/wifi.c` | Station mode, reconnect every 5 s, SNTP clock (Brasília time) |
 | `main/screen.c` | Brightness, the 180° turn (sent to the ST7701 panel itself, so drawing costs nothing), and touch correction: the touch chip stretches X towards the side edges, so X is squeezed into 20..459 |
 | `main/settings.c` | Wi-Fi profiles, refresh interval, glide speed, auto-scroll per page, brightness and orientation in NVS. Profile defaults come from `main/wifi_profiles_local.h` (git-ignored; template `wifi_profiles_local.example.h`) |
 | `main/cli.c` | The `stock>` commands (esp_console) |
-| `main/ui/` | LVGL screens: `ui_watchlist.c` (the two pages and their wheels), `ui_detail.c`, `ui_settings.c` (tabs; add new settings topics there), plus colours, fonts and number formatting in `ui_theme.c` |
+| `main/banner_messages.c` | The banner quotes: the non-empty lines of the two embedded text files |
+| `main/ui/` | LVGL screens: `ui_watchlist.c` (the two pages and their wheels), `ui_banner.c` (the rolling quotes), `ui_detail.c`, `ui_settings.c` (tabs; add new settings topics there), plus colours, fonts and number formatting in `ui_theme.c`. `ui.c` creates the screens and runs the 250 ms model poll |
 | `main/fonts/` | Montserrat with accented letters (Latin-1) and LVGL icons. Regenerate with `tools/gen_fonts.sh` |
+| `main/images/` | The 32x32 emoji badges and title icons (see Credits) |
+| `lvgl_pro_ui/` | LVGL Pro Editor design of the main and detail screens. It is behind the firmware; see `docs/lvgl-pro-guide.md` |
 
 **How the endless wheel works** (`ui_watchlist.c`):
 - The two pages sit side by side in an LVGL tileview. Each page's list is a normal LVGL scrolling container, one row per stock.
