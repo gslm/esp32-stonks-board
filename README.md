@@ -13,6 +13,8 @@ Yahoo Finance refreshed every 30 s.
 - **Badges after the ticker:** the day's best performer gets a money bag above +2%, or a top hat above +10%. The worst performer gets flying money below -2%. The thresholds are `MONEYBAG_PCT`, `TOPHAT_PCT` and `LOSER_PCT` in `main/ui/ui_watchlist.c`.
 - **A gold banner** along the bottom of the top bar scrolls a random quote from `money_quotes.txt` (one per line). A new quote is picked each time one has scrolled off. The file is built into the firmware, so edit it and rebuild.
 - **Tap a row** to see the stock's day range, volume and an intraday chart.
+- **The Wi-Fi icon** (top right) is green when online, yellow when on Wi-Fi without internet (the last refresh failed), and red with a slash when not connected.
+- **The gear button** (top right) opens Settings. Its Wi-Fi tab shows the connection, plus four Wi-Fi profiles (Work, Home2, Home3, Hotspot - Test): tap one to connect, or Edit to change its network and password.
 
 The watchlist is fixed in `main/stock_model.c` (`DEFAULT_STOCKS`); edit it there and rebuild.
 
@@ -54,8 +56,17 @@ Tested on Ubuntu Linux with the versions below.
    The example has no absolute paths; clangd paths use `${userHome}` and `${workspaceFolder}`.
    `.vscode/settings.json` is not tracked, because the ESP-IDF extension writes machine-specific
    entries into it (the selected ESP-IDF path, the serial port).
-5. **Wi-Fi** is stored on the board, not in the repo. A newly flashed board needs the `wifi`
-   command once (see "First run: Wi-Fi").
+5. **Wi-Fi profile defaults.** The passwords are not in the repo (it is public). Create the
+   local, git-ignored file from the template and fill in the four profiles:
+
+   ```bash
+   # new workstation
+   cd ~/02_stock_watchlist
+   cp main/wifi_profiles_local.example.h main/wifi_profiles_local.h
+   ```
+
+   Without it the firmware still builds, but the profiles start empty; you can then set them
+   on the device (Settings > Wi-Fi > Edit).
 6. **Optional, Node.js:** only needed to regenerate `main/fonts/` with `tools/gen_fonts.sh`.
    The generated fonts are committed.
 7. **Optional, LVGL Pro Editor 2.0.5** (UI design project in `lvgl_pro_ui/`):
@@ -72,25 +83,29 @@ Tested on Ubuntu Linux with the versions below.
 Use **File > Open Folder** and pick this folder. It is an ESP-IDF project at its root, so the
 ESP-IDF extension's commands (Ctrl+E D: build, flash, monitor) work directly.
 
-## First run: Wi-Fi
+## Wi-Fi profiles
 
-1. Plug the cable into the **USB TO UART** port and open the monitor (Ctrl+E M, or `idf.py -p /dev/ttyACM1 monitor`).
-2. At the `stock>` prompt, type your network name and password (use quotes if they contain spaces):
+Settings (gear button) > Wi-Fi has four profiles: Work, Home2, Home3 and Hotspot - Test.
 
-   ```
-   wifi "MyNetwork" "my password"
-   ```
-
-The credentials are saved in the board's NVS and survive reflashing. Only `idf.py erase-flash` clears them.
+- **Connect:** tap a profile. It becomes the active one (marked and outlined), and the choice
+  is saved.
+- **Edit:** change a profile's SSID and password with the on-screen keyboard. The password
+  shows as dots. Leave it empty to keep the current one.
+- **Scan networks:** lists the networks the board can see, strongest first, with signal (dBm) and
+  channel. Networks used by a profile are highlighted. Around -80 dBm or weaker, connections are
+  unreliable. The list is also printed to the serial log.
+- **Defaults:** each profile starts from `main/wifi_profiles_local.h` until it is edited on the
+  device. Edits are saved in the board's NVS and survive reflashing.
+- **After a full erase** (`idf.py erase-flash`): the board starts on Work with the defaults.
 
 ## Command line
 
-The `stock>` prompt runs on the **USB TO UART** port. The USB-OTG port shows the logs but takes no input.
+The `stock>` prompt runs on the **USB TO UART** port. The USB-OTG port shows the logs but takes no input, so typing there does nothing.
 
 | Command | What it does |
 | --- | --- |
 | `list` | Watchlist with last price, change and change % |
-| `wifi` / `wifi "ssid" "pass"` | Show the Wi-Fi status / set new credentials |
+| `wifi` / `wifi "ssid" "pass"` | Show the Wi-Fi status / set new credentials for the active profile |
 | `interval 15` | Refresh every 15 s (10..3600) |
 | `speed 0.5` | Glide speed, 0 (stopped) to 1.0 (one row per second). The header slider follows it. Saved |
 | `refresh` | Fetch now |
@@ -112,9 +127,9 @@ The `stock>` prompt runs on the **USB TO UART** port. The USB-OTG port shows the
 | `main/stock_model.c` | The watchlist (`DEFAULT_STOCKS`) and its quotes, shared by all tasks behind one mutex |
 | `main/quotes.c` | The only task that talks to the network: HTTPS (`esp_http_client` + certificate bundle) and JSON parsing (cJSON) |
 | `main/wifi.c` | Station mode, reconnect every 5 s, SNTP clock (Brasília time) |
-| `main/settings.c` | Wi-Fi credentials, refresh interval and glide speed in NVS. Menuconfig defaults are under *Stock watchlist* |
+| `main/settings.c` | Wi-Fi profiles, refresh interval and glide speed in NVS. Profile defaults come from `main/wifi_profiles_local.h` (git-ignored; template `wifi_profiles_local.example.h`) |
 | `main/cli.c` | The `stock>` commands (esp_console) |
-| `main/ui/` | LVGL screens: `ui_watchlist.c` (the wheel) and `ui_detail.c`, plus colours, fonts and number formatting in `ui_theme.c` |
+| `main/ui/` | LVGL screens: `ui_watchlist.c` (the wheel), `ui_detail.c`, `ui_settings.c` (tabs; add new settings topics there), plus colours, fonts and number formatting in `ui_theme.c` |
 | `main/fonts/` | Montserrat with accented letters (Latin-1) and LVGL icons. Regenerate with `tools/gen_fonts.sh` |
 
 **How the endless wheel works** (`ui_watchlist.c`):

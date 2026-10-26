@@ -1,7 +1,7 @@
 # Session state
 
 Living checkpoint of in-flight work (see DIRECTIVES.md, rule 6). Keep it short and current.
-Last updated: 2026-10-23, end of day.
+Last updated: 2026-10-25.
 
 ## Done
 
@@ -15,11 +15,22 @@ Last updated: 2026-10-23, end of day.
   a 480-line draw buffer (slower than direct mode), PSRAM at 120 MHz (needs 120 MHz flash too;
   experimental, not pursued).
 
-## Local only (this workstation)
+## In progress: Settings screen (operator approved 2026-10-25)
 
-- The LVGL perf monitor log (`LV_USE_SYSMON`, `LV_USE_PERF_MONITOR`, `..._LOG_MODE`,
-  `LV_USE_LOG`) is on in the untracked `sdkconfig`, and the board is flashed with it. To turn it
-  off: delete `sdkconfig` and rebuild (defaults have it off), then flash.
+1. Done: frame-rate monitor off (sdkconfig regenerated from defaults), console quiet.
+2. Done: gear button left of the Wi-Fi status, Settings screen as an lv_tabview, "Wi-Fi" tab.
+3. Done (flashed, not yet tested on screen by the operator; uncommitted): Wi-Fi profiles Work / Home2 / Home3 (SSID shown, password hidden, editable, saved in
+   NVS). Default passwords live in a git-ignored local header, only a template is tracked
+   (the repo is public). Work is used when nothing is saved yet (after a full erase). The
+   `wifi` console command stays as a backup.
+
+4. Done (flashed 2026-10-25, uncommitted): Scan button in the Wi-Fi tab (list also logged),
+   Home3 default SSID "HomeTest_3" (local header only), Wi-Fi icon green/yellow/red + slash.
+   4th profile "Hotspot - Test" added (defaults in the local header only).
+   Open: Home2 "homeTest" fails with reason 201 (not found); once it was briefly connected but
+   HTTPS failed. Likely weak signal; waiting for the operator's scan result.
+
+Note: the console input only works on the USB TO UART port; the USB-OTG port is output only.
 
 ## Next (operator to decide)
 
