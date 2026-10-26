@@ -57,7 +57,8 @@ static int cmd_wifi(int argc, char **argv)
         char ip[16];
         bool configured = settings_get_wifi(ssid, password);
         wifi_ip_string(ip, sizeof(ip));
-        printf("SSID: %s\n", configured ? ssid : "(not set)");
+        printf("Profile: %s, SSID: %s\n", settings_wifi_profile_name(settings_get_wifi_active()),
+               configured ? ssid : "(not set)");
         if (wifi_is_connected()) {
             printf("Connected, IP %s, signal %d dBm\n", ip, wifi_rssi());
         } else {
@@ -70,7 +71,7 @@ static int cmd_wifi(int argc, char **argv)
             }
             printf("\n");
         }
-        printf("To change: wifi \"<ssid>\" \"<password>\"\n");
+        printf("To change this profile: wifi \"<ssid>\" \"<password>\"  (or Settings > Wi-Fi on screen)\n");
         return 0;
     }
     if (argc > 3) {
@@ -164,7 +165,7 @@ void cli_start(void)
 
     const esp_console_cmd_t cmds[] = {
         {.command = "list", .help = "Show the watchlist with the latest quotes", .func = cmd_list},
-        {.command = "wifi", .help = "Show Wi-Fi status, or set it: wifi \"<ssid>\" \"<password>\"", .hint = "[<ssid> [<password>]]", .func = cmd_wifi},
+        {.command = "wifi", .help = "Show Wi-Fi status, or set the active profile: wifi \"<ssid>\" \"<password>\"", .hint = "[<ssid> [<password>]]", .func = cmd_wifi},
         {.command = "interval", .help = "Show or set the refresh interval in seconds (10..3600)", .hint = "[<seconds>]", .func = cmd_interval},
         {.command = "speed", .help = "Show or set the auto-roll speed: 0 (stopped) to 1.0 (one row per second), default 0.3", .hint = "[<x>]", .func = cmd_speed},
         {.command = "refresh", .help = "Fetch all quotes now", .func = cmd_refresh},

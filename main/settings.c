@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 #include "nvs.h"
 #include "sdkconfig.h"
@@ -16,20 +17,55 @@ static esp_err_t get_str(const char *key, char *out, size_t len)
     return err;
 }
 
-bool settings_get_wifi(char ssid[SETTINGS_SSID_LEN], char password[SETTINGS_PASSWORD_LEN])
+/* Profile defaults: the local file holds the real passwords; a fresh clone falls back to the empty template */
+#if __has_include("wifi_profiles_local.h")
+#include "wifi_profiles_local.h"
+#else
+#include "wifi_profiles_local.example.h"
+#endif
+
+static const struct {
+    const char *name;
+    const char *ssid;
+    const char *password;
+} DEFAULT_PROFILES[SETTINGS_WIFI_PROFILES] = {
+    {"Work", WIFI_WORK_SSID, WIFI_WORK_PASSWORD},
+    {"Home2", WIFI_HOME2_SSID, WIFI_HOME2_PASSWORD},
+    {"Home3", WIFI_HOME3_SSID, WIFI_HOME3_PASSWORD},
+    {"Hotspot - Test", WIFI_HOTSPOT_SSID, WIFI_HOTSPOT_PASSWORD},
+};
+
+static int clamp_profile(int profile)
 {
-    if (get_str("wifi_ssid", ssid, SETTINGS_SSID_LEN) != ESP_OK || ssid[0] == '\0') {
-        strlcpy(ssid, CONFIG_STOCK_WIFI_SSID, SETTINGS_SSID_LEN);
-        strlcpy(password, CONFIG_STOCK_WIFI_PASSWORD, SETTINGS_PASSWORD_LEN);
-    } else if (get_str("wifi_pass", password, SETTINGS_PASSWORD_LEN) != ESP_OK) {
-        password[0] = '\0';
-    }
-    return ssid[0] != '\0';
+    return (profile >= 0 && profile < SETTINGS_WIFI_PROFILES) ? profile : 0;
 }
 
-esp_err_t settings_set_wifi(const char *ssid, const char *password)
+const char *settings_wifi_profile_name(int profile)
 {
-    if (strlen(ssid) >= SETTINGS_SSID_LEN || strlen(password) >= SETTINGS_PASSWORD_LEN) {
+    return DEFAULT_PROFILES[clamp_profile(profile)].name;
+}
+
+void settings_get_wifi_profile(int profile, char ssid[SETTINGS_SSID_LEN], char password[SETTINGS_PASSWORD_LEN])
+{
+    profile = clamp_profile(profile);
+    char key[16];
+    snprintf(key, sizeof(key), "wifi%d_ssid", profile);
+    if (get_str(key, ssid, SETTINGS_SSID_LEN) != ESP_OK) {
+        /* Never edited on the device: use the defaults */
+        strlcpy(ssid, DEFAULT_PROFILES[profile].ssid, SETTINGS_SSID_LEN);
+        strlcpy(password, DEFAULT_PROFILES[profile].password, SETTINGS_PASSWORD_LEN);
+        return;
+    }
+    snprintf(key, sizeof(key), "wifi%d_pass", profile);
+    if (get_str(key, password, SETTINGS_PASSWORD_LEN) != ESP_OK) {
+        password[0] = '\0';
+    }
+}
+
+esp_err_t settings_set_wifi_profile(int profile, const char *ssid, const char *password)
+{
+    if (profile < 0 || profile >= SETTINGS_WIFI_PROFILES || strlen(ssid) >= SETTINGS_SSID_LEN ||
+        strlen(password) >= SETTINGS_PASSWORD_LEN) {
         return ESP_ERR_INVALID_ARG;
     }
     nvs_handle_t nvs;
@@ -37,15 +73,58 @@ esp_err_t settings_set_wifi(const char *ssid, const char *password)
     if (err != ESP_OK) {
         return err;
     }
-    err = nvs_set_str(nvs, "wifi_ssid", ssid);
+    char key[16];
+    snprintf(key, sizeof(key), "wifi%d_ssid", profile);
+    err = nvs_set_str(nvs, key, ssid);
     if (err == ESP_OK) {
-        err = nvs_set_str(nvs, "wifi_pass", password);
+        snprintf(key, sizeof(key), "wifi%d_pass", profile);
+        err = nvs_set_str(nvs, key, password);
     }
     if (err == ESP_OK) {
         err = nvs_commit(nvs);
     }
     nvs_close(nvs);
     return err;
+}
+
+int settings_get_wifi_active(void)
+{
+    uint8_t value = 0;
+    nvs_handle_t nvs;
+    if (nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs) == ESP_OK) {
+        nvs_get_u8(nvs, "wifi_active", &value);
+        nvs_close(nvs);
+    }
+    return clamp_profile(value);
+}
+
+esp_err_t settings_set_wifi_active(int profile)
+{
+    if (profile < 0 || profile >= SETTINGS_WIFI_PROFILES) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t nvs;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_set_u8(nvs, "wifi_active", (uint8_t)profile);
+    if (err == ESP_OK) {
+        err = nvs_commit(nvs);
+    }
+    nvs_close(nvs);
+    return err;
+}
+
+bool settings_get_wifi(char ssid[SETTINGS_SSID_LEN], char password[SETTINGS_PASSWORD_LEN])
+{
+    settings_get_wifi_profile(settings_get_wifi_active(), ssid, password);
+    return ssid[0] != '\0';
+}
+
+esp_err_t settings_set_wifi(const char *ssid, const char *password)
+{
+    return settings_set_wifi_profile(settings_get_wifi_active(), ssid, password);
 }
 
 static volatile int s_roll_speed = -1; /* -1 = not loaded from NVS yet */

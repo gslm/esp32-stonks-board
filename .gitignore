@@ -19,3 +19,6 @@ __pycache__/
 # Per-machine VSCode settings: the ESP-IDF extension writes absolute paths into this file.
 # Start from .vscode/settings.example.json (tracked).
 .vscode/settings.json
+
+# Wi-Fi passwords (the repo is public). Template: main/wifi_profiles_local.example.h
+main/wifi_profiles_local.h

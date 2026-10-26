@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include "esp_event.h"
 #include "esp_log.h"
@@ -22,11 +23,82 @@ static esp_timer_handle_t s_reconnect_timer;
 static bool s_configured;
 static int s_last_reason;
 
+/* Scan of nearby networks (Settings > Wi-Fi > Scan) */
+static portMUX_TYPE s_scan_lock = portMUX_INITIALIZER_UNLOCKED;
+static wifi_network_t s_scan[WIFI_SCAN_MAX];
+static int s_scan_count;
+static uint32_t s_scan_version;
+static volatile bool s_scan_running;
+
 static void reconnect_cb(void *arg)
 {
+    if (s_configured && !s_scan_running && !(xEventGroupGetBits(s_events) & CONNECTED_BIT)) {
+        esp_wifi_connect();
+    }
+}
+
+static int compare_rssi(const void *a, const void *b)
+{
+    return ((const wifi_network_t *)b)->rssi - ((const wifi_network_t *)a)->rssi;
+}
+
+/* Runs in the event loop task when the radio has finished scanning */
+static void on_scan_done(void)
+{
+    static wifi_ap_record_t records[WIFI_SCAN_MAX];
+    static wifi_network_t found[WIFI_SCAN_MAX];
+    uint16_t n = WIFI_SCAN_MAX;
+    if (esp_wifi_scan_get_ap_records(&n, records) != ESP_OK) {
+        n = 0;
+    }
+    for (int i = 0; i < n; i++) {
+        strlcpy(found[i].ssid, (const char *)records[i].ssid, sizeof(found[i].ssid));
+        found[i].rssi = records[i].rssi;
+        found[i].channel = records[i].primary;
+        found[i].open = records[i].authmode == WIFI_AUTH_OPEN;
+    }
+    qsort(found, n, sizeof(found[0]), compare_rssi);
+    portENTER_CRITICAL(&s_scan_lock);
+    memcpy(s_scan, found, n * sizeof(found[0]));
+    s_scan_count = n;
+    s_scan_version++;
+    portEXIT_CRITICAL(&s_scan_lock);
+    s_scan_running = false;
+    ESP_LOGI(TAG, "Scan found %d networks", n);
+    for (int i = 0; i < n; i++) {
+        ESP_LOGI(TAG, "  %4d dBm  ch %2d  %s", found[i].rssi, found[i].channel, found[i].ssid[0] ? found[i].ssid : "(hidden)");
+    }
+    /* Resume connecting, if the scan interrupted it */
     if (s_configured && !(xEventGroupGetBits(s_events) & CONNECTED_BIT)) {
         esp_wifi_connect();
     }
+}
+
+/* Short-lived task: the radio refuses to scan (ESP_ERR_WIFI_STATE) while a connection attempt is
+   in progress, so stop that attempt and retry for a moment */
+static void scan_task(void *arg)
+{
+    esp_timer_stop(s_reconnect_timer);
+    if (!(xEventGroupGetBits(s_events) & CONNECTED_BIT)) {
+        esp_wifi_disconnect();
+    }
+    wifi_scan_config_t cfg = {0}; /* all channels, active scan */
+    esp_err_t err = ESP_FAIL;
+    for (int i = 0; i < 30; i++) {
+        err = esp_wifi_scan_start(&cfg, false);
+        if (err != ESP_ERR_WIFI_STATE) {
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Scan could not start: %s", esp_err_to_name(err));
+        s_scan_running = false;
+        if (s_configured && !(xEventGroupGetBits(s_events) & CONNECTED_BIT)) {
+            esp_wifi_connect();
+        }
+    }
+    vTaskDelete(NULL);
 }
 
 static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
@@ -46,6 +118,8 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
             esp_timer_stop(s_reconnect_timer);
             esp_timer_start_once(s_reconnect_timer, RECONNECT_DELAY_US);
         }
+    } else if (id == WIFI_EVENT_SCAN_DONE) {
+        on_scan_done();
     }
 }
 
@@ -95,11 +169,12 @@ void wifi_start(void)
     char password[SETTINGS_PASSWORD_LEN];
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     if (settings_get_wifi(ssid, password)) {
-        ESP_LOGI(TAG, "Connecting to \"%s\"", ssid);
+        ESP_LOGI(TAG, "Connecting to \"%s\" (profile %s)", ssid, settings_wifi_profile_name(settings_get_wifi_active()));
         ESP_ERROR_CHECK(apply_config(ssid, password));
         model_set_net_state(NET_CONNECTING);
     } else {
-        ESP_LOGW(TAG, "No Wi-Fi configured. Use the console command: wifi \"<ssid>\" \"<password>\"");
+        ESP_LOGW(TAG, "Wi-Fi profile \"%s\" has no SSID. Set it in Settings (gear) > Wi-Fi",
+                 settings_wifi_profile_name(settings_get_wifi_active()));
         model_set_net_state(NET_NOT_CONFIGURED);
     }
     ESP_ERROR_CHECK(esp_wifi_start());
@@ -109,16 +184,13 @@ void wifi_start(void)
     esp_netif_sntp_init(&sntp);
 }
 
-esp_err_t wifi_set_credentials(const char *ssid, const char *password)
+/* Drops the current connection and connects with new credentials (an empty SSID just stops) */
+static esp_err_t connect_to(const char *ssid, const char *password)
 {
-    esp_err_t err = settings_set_wifi(ssid, password);
-    if (err != ESP_OK) {
-        return err;
-    }
-    ESP_LOGI(TAG, "Connecting to \"%s\"", ssid);
     esp_timer_stop(s_reconnect_timer);
     esp_wifi_disconnect();
     /* The driver refuses a new config (ESP_ERR_WIFI_STATE) while a connection attempt is winding down */
+    esp_err_t err = ESP_OK;
     for (int i = 0; i < 20; i++) {
         err = apply_config(ssid, password);
         if (err != ESP_ERR_WIFI_STATE) {
@@ -130,8 +202,31 @@ esp_err_t wifi_set_credentials(const char *ssid, const char *password)
         return err;
     }
     s_last_reason = 0;
+    if (ssid[0] == '\0') {
+        model_set_net_state(NET_NOT_CONFIGURED);
+        return ESP_OK;
+    }
+    ESP_LOGI(TAG, "Connecting to \"%s\"", ssid);
     model_set_net_state(NET_CONNECTING);
     return esp_wifi_connect();
+}
+
+esp_err_t wifi_set_credentials(const char *ssid, const char *password)
+{
+    esp_err_t err = settings_set_wifi(ssid, password);
+    return err == ESP_OK ? connect_to(ssid, password) : err;
+}
+
+esp_err_t wifi_use_profile(int profile)
+{
+    esp_err_t err = settings_set_wifi_active(profile);
+    if (err != ESP_OK) {
+        return err;
+    }
+    char ssid[SETTINGS_SSID_LEN];
+    char password[SETTINGS_PASSWORD_LEN];
+    settings_get_wifi_profile(profile, ssid, password);
+    return connect_to(ssid, password);
 }
 
 bool wifi_is_connected(void)
@@ -146,6 +241,36 @@ int wifi_rssi(void)
         return 0;
     }
     return rssi;
+}
+
+esp_err_t wifi_scan_start(void)
+{
+    if (s_scan_running) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_scan_running = true;
+    if (xTaskCreate(scan_task, "wifi_scan", 3072, NULL, 4, NULL) != pdPASS) {
+        s_scan_running = false;
+        return ESP_ERR_NO_MEM;
+    }
+    return ESP_OK;
+}
+
+bool wifi_scan_running(void)
+{
+    return s_scan_running;
+}
+
+int wifi_scan_results(wifi_network_t *out, int max, uint32_t *version)
+{
+    portENTER_CRITICAL(&s_scan_lock);
+    int n = s_scan_count < max ? s_scan_count : max;
+    memcpy(out, s_scan, n * sizeof(out[0]));
+    if (version) {
+        *version = s_scan_version;
+    }
+    portEXIT_CRITICAL(&s_scan_lock);
+    return n;
 }
 
 int wifi_last_disconnect_reason(void)

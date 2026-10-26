@@ -1,6 +1,5 @@
 /*
- * Persistent settings in NVS: Wi-Fi credentials, the refresh interval and the roll speed.
- * Values saved with the console commands take precedence over the menuconfig defaults.
+ * Persistent settings in NVS: Wi-Fi profiles, the refresh interval and the roll speed.
  */
 #pragma once
 
@@ -12,8 +11,21 @@
 #define SETTINGS_REFRESH_MIN_S 10
 #define SETTINGS_REFRESH_MAX_S 3600
 
-/* Returns false when no SSID is configured anywhere. */
+/*
+ * Wi-Fi profiles: Work, Home2, Home3, Hotspot - Test. Each starts from the defaults in wifi_profiles_local.h
+ * (git-ignored) until it is edited on the device, which saves it in NVS. One profile is active;
+ * Work when nothing is saved yet.
+ */
+#define SETTINGS_WIFI_PROFILES 4
+const char *settings_wifi_profile_name(int profile);
+void settings_get_wifi_profile(int profile, char ssid[SETTINGS_SSID_LEN], char password[SETTINGS_PASSWORD_LEN]);
+esp_err_t settings_set_wifi_profile(int profile, const char *ssid, const char *password);
+int settings_get_wifi_active(void);
+esp_err_t settings_set_wifi_active(int profile);
+
+/* Credentials of the active profile. Returns false when its SSID is empty. */
 bool settings_get_wifi(char ssid[SETTINGS_SSID_LEN], char password[SETTINGS_PASSWORD_LEN]);
+/* Saves new credentials into the active profile (the "wifi" console command). */
 esp_err_t settings_set_wifi(const char *ssid, const char *password);
 
 /* Auto-roll speed in tenths: 0 = stopped .. 10 = 1.0x (one row per second). Cached in RAM,
