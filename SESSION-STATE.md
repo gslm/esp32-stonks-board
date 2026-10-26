@@ -33,15 +33,22 @@ Last updated: 2026-10-26.
   -10 % or lower, red "CIRCUIT BREAKER!" title + lightning emoji, red banner with quotes from
   `circuit_breaker_quotes.txt`. Commit commands given to the operator, who commits and pushes.
 
-- Docs brought up to date with the firmware (2026-10-26, operator cleared it; not committed
-  yet, commit commands given to the operator): ui-spec revision 4 (header with gear, Wi-Fi
-  icon, update time and banner; Market page; 92 px rows; badges; Settings screen), README
-  (repo name, Docs table, code map), lvgl-pro-guide and lvgl_pro_ui/README (design is at
-  revision 3, full list of known differences), research-notes status note.
-  Left alone (code/config comments, operator to decide): "watchlist in NVS" in
-  partitions.csv and sdkconfig.defaults, `CONFIG_STOCK_WIFI_*` in .gitignore,
-  `01_hello_counter` in main/idf_component.yml and sdkconfig.defaults, `02_stock_watchlist`
-  in lvgl_pro_ui/project.xml, "Updated hh:mm:ss" in wifi.c.
+- Docs brought up to date with the firmware (2026-10-26, committed): ui-spec revision 4
+  (header with gear, Wi-Fi icon, update time and banner; Market page; 92 px rows; badges;
+  Settings screen), README (repo name, Docs table, code map), lvgl-pro-guide and
+  lvgl_pro_ui/README (design is at revision 3, full list of known differences),
+  research-notes status note. Stale config comments fixed (committed, not pushed yet).
+- Code pass (2026-10-26): no correctness bugs found. Fixed, not committed yet (commit
+  commands given to the operator), not built (no IDF 6 on this machine; operator to build):
+  - stale comments in main.c, stock_model.h, quotes.h, ui_watchlist.c and the design XML
+    (globals.xml, app_header.xml, screen_watchlist.xml);
+  - console `list` prints each row with its screen decimals (USD/BRL 4, IBOV 0, DI rates
+    with %); `status` says "Rows: 20 (stocks and market)" instead of "Stocks: 20";
+  - Settings > Wi-Fi > Edit shows "Could not save: <error>" when NVS fails, instead of
+    closing as if saved.
+  Left as is (operator agreed): the up to 2 s freeze while switching profiles
+  (connect_to() waits in the LVGL task), the repeated NVS code in settings.c, the unused
+  4 MB `storage` partition.
 
 ## In progress: learning guide `docs/firmware-guide.md` (operator asked 2026-10-26)
 
