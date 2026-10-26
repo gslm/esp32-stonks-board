@@ -33,6 +33,16 @@ Last updated: 2026-10-26.
   -10 % or lower, red "CIRCUIT BREAKER!" title + lightning emoji, red banner with quotes from
   `circuit_breaker_quotes.txt`. Commit commands given to the operator, who commits and pushes.
 
+- Docs brought up to date with the firmware (2026-10-26, operator cleared it; not committed
+  yet, commit commands given to the operator): ui-spec revision 4 (header with gear, Wi-Fi
+  icon, update time and banner; Market page; 92 px rows; badges; Settings screen), README
+  (repo name, Docs table, code map), lvgl-pro-guide and lvgl_pro_ui/README (design is at
+  revision 3, full list of known differences), research-notes status note.
+  Left alone (code/config comments, operator to decide): "watchlist in NVS" in
+  partitions.csv and sdkconfig.defaults, `CONFIG_STOCK_WIFI_*` in .gitignore,
+  `01_hello_counter` in main/idf_component.yml and sdkconfig.defaults, `02_stock_watchlist`
+  in lvgl_pro_ui/project.xml, "Updated hh:mm:ss" in wifi.c.
+
 ## In progress: learning guide `docs/firmware-guide.md` (operator asked 2026-10-26)
 
 In depth, for the operator to learn ESP-IDF and LVGL from this code. One section per checkpoint:

@@ -249,6 +249,7 @@ The biggest performance work. The list glide went from about 11 FPS to 19.5 FPS:
   is a new `create_*_tab()` function plus one `lv_tabview_add_tab()` line.
 - **Shared look:** colours, fonts and number formatting live in `ui_theme.c` / `ui_theme.h`, so the
   screens don't repeat hex values or format code. Gold tickers for stocks, purple for market rows.
+  `docs/ui-spec.md` gives every colour, font, size and position of the three screens.
 - **Hand-written, not generated.** The UI was first sketched in LVGL Pro Editor (`lvgl_pro_ui/`),
   but the firmware code is written by hand; the design project now lags behind it.
 

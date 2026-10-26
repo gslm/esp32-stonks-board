@@ -3,6 +3,18 @@
 Findings gathered while setting up the first test app (hello counter, since removed). They feed the next steps: the UI design
 workflow and the stock-price app.
 
+**Status (2026-10-26).** These notes are a snapshot, kept for their sources and reasoning. Where
+the project went since (details in [firmware-guide.md](firmware-guide.md)):
+- **UI:** the firmware UI is hand-written LVGL C (`main/ui/`). The design project
+  (`lvgl_pro_ui/`) uses LVGL Pro Editor, not SquareLine Studio, and the `lv_subject` binding
+  plan below was not used: a 250 ms LVGL timer pulls from the data model instead.
+- **Display:** two frame buffers in PSRAM, with LVGL in direct mode (guide section 1.10).
+- **Data:** the device polls Yahoo Finance (stocks, Ibovespa, USD/BRL, EWZ) and TradingView's
+  public scanner (DI futures) itself, every 30 s by default, with no proxy and no API keys.
+- **Open questions** (at the end), as the firmware has them today: B3 stocks plus Brazilian
+  market indicators; 15-minute delayed data refreshed every 30 s; prices and daily change
+  only, no holdings or P&L.
+
 ## Board facts that matter
 
 - **Module:** ESP32-S3-WROOM-1-N16R8, with 16 MB quad flash and 8 MB octal PSRAM. GPIO35-37 are taken by the PSRAM.
