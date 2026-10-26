@@ -106,7 +106,14 @@ static void save_edit(void)
     char old_password[SETTINGS_PASSWORD_LEN];
     settings_get_wifi_profile(s_edit_profile, old_ssid, old_password);
     /* An empty password field keeps the saved password */
-    settings_set_wifi_profile(s_edit_profile, ssid, password[0] ? password : old_password);
+    esp_err_t err = settings_set_wifi_profile(s_edit_profile, ssid, password[0] ? password : old_password);
+    if (err != ESP_OK) {
+        char msg[64];
+        snprintf(msg, sizeof(msg), "Could not save: %s", esp_err_to_name(err));
+        ui_set_text(s_edit_hint, msg);
+        lv_obj_set_style_text_color(s_edit_hint, UI_DOWN, 0);
+        return;
+    }
     if (s_edit_profile == settings_get_wifi_active()) {
         wifi_use_profile(s_edit_profile); /* reconnect with the new credentials */
     }

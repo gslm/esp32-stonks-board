@@ -273,7 +273,8 @@ y=480  └───────────────────────�
     - two one-line text areas, 416x44, `font_16`, at y=36 ("Network name (SSID)", up to 32
       characters) and y=88 ("Password (empty = keep current)", up to 64, shown as dots);
     - a hint in `font_14` `text_secondary` at y=144: "Tap a field to type. OK saves, keyboard
-      key cancels." It turns into "The network name can't be empty" in `down`.
+      key cancels." It turns into "The network name can't be empty", or "Could not save:"
+      with the error name, in `down`.
   - The keyboard, 480x240 at the bottom edge, `font_20`. OK saves (an empty password keeps
     the saved one) and reconnects if the profile is the active one. The keyboard key closes
     the overlay.
