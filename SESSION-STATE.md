@@ -33,6 +33,12 @@ Last updated: 2026-10-26.
   -10 % or lower, red "CIRCUIT BREAKER!" title + lightning emoji, red banner with quotes from
   `circuit_breaker_quotes.txt`. Commit commands given to the operator, who commits and pushes.
 
+## In progress: learning guide `docs/firmware-guide.md` (operator asked 2026-10-26)
+
+In depth, for the operator to learn ESP-IDF and LVGL from this code. One section per checkpoint:
+1. Architecture decisions: written (16 subsections), verified against the sources.
+2. Hardware platform, 3. Components, 4. Files down to functions, 5. Other: to do, one at a time.
+
 Note: the console input only works on the USB TO UART port; the USB-OTG port is output only.
 
 ## Next (operator to decide)
