@@ -1,5 +1,6 @@
 /*
- * Persistent settings in NVS: Wi-Fi profiles, the refresh interval and the roll speed.
+ * Persistent settings in NVS: Wi-Fi profiles, the refresh interval, the roll speed, which
+ * main-screen pages auto-scroll, and the screen's brightness and orientation.
  */
 #pragma once
 
@@ -34,6 +35,20 @@ esp_err_t settings_set_wifi(const char *ssid, const char *password);
 #define SETTINGS_ROLL_SPEED_DEFAULT 3
 int settings_get_roll_speed(void);
 esp_err_t settings_set_roll_speed(int tenths, bool save); /* ESP_ERR_INVALID_ARG outside 0..10 */
+
+/* Auto-roll on or off for each main-screen page: 0 = Stocks, 1 = Market. On by default. Cached in RAM. */
+#define SETTINGS_PAGES 2
+bool settings_get_autoscroll(int page);
+esp_err_t settings_set_autoscroll(int page, bool on); /* ESP_ERR_INVALID_ARG for an unknown page */
+
+/* Backlight in %, 10..100 (never fully dark), default 100. Applied by screen.c, saved here. */
+#define SETTINGS_BRIGHTNESS_MIN 10
+int settings_get_brightness(void);
+esp_err_t settings_set_brightness(int percent); /* ESP_ERR_INVALID_ARG outside 10..100 */
+
+/* "Upside down" in Settings > Screen, default off. Off is the panel turned 180° (see screen.c). */
+bool settings_get_upside_down(void);
+esp_err_t settings_set_upside_down(bool on);
 
 int settings_get_refresh_s(void);
 esp_err_t settings_set_refresh_s(int seconds); /* ESP_ERR_INVALID_ARG outside 10..3600 */

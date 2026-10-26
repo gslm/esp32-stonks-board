@@ -1,4 +1,4 @@
-/* Detail screen for one stock: price, change, intraday chart and day stats. */
+/* Detail screen for one stock or market row: price, change, intraday chart and day stats. */
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,7 +18,7 @@ static lv_obj_t *s_chart;
 static lv_chart_series_t *s_series;
 static lv_obj_t *s_chart_note;
 static lv_obj_t *s_stats[STAT_COUNT];
-static char s_id[STOCK_SYMBOL_LEN]; /* Yahoo symbol on display */
+static char s_id[STOCK_SYMBOL_LEN]; /* data source symbol on display */
 static uint32_t s_data_version = UINT32_MAX;
 static stock_t s_stock;
 
@@ -114,26 +114,33 @@ static void update_chart(const stock_t *s, lv_color_t color)
     if (s->series_len < 2) {
         lv_chart_set_point_count(s_chart, 1);
         lv_chart_set_all_values(s_chart, s_series, LV_CHART_POINT_NONE);
-        ui_set_text(s_chart_note, s->not_found ? "No data on Yahoo Finance" : "Loading intraday chart...");
+        const char *note = "Loading intraday chart...";
+        if (s->source == STOCK_SOURCE_TRADINGVIEW) {
+            note = "No intraday chart for this one";
+        } else if (s->not_found) {
+            note = "No data on Yahoo Finance";
+        }
+        ui_set_text(s_chart_note, note);
         lv_obj_remove_flag(s_chart_note, LV_OBJ_FLAG_HIDDEN);
         return;
     }
     lv_obj_add_flag(s_chart_note, LV_OBJ_FLAG_HIDDEN);
 
-    /* Chart values are integers: use cents */
+    /* Chart values are integers: use cents, or 1/10000 for the dollar, which moves in small steps */
+    float scale = s->format == STOCK_FMT_FX ? 10000.0f : 100.0f;
     float lo = s->series[0];
     float hi = s->series[0];
     for (int i = 1; i < s->series_len; i++) {
         lo = fminf(lo, s->series[i]);
         hi = fmaxf(hi, s->series[i]);
     }
-    int32_t lo_c = (int32_t)floorf(lo * 100.0f);
-    int32_t hi_c = (int32_t)ceilf(hi * 100.0f);
+    int32_t lo_c = (int32_t)floorf(lo * scale);
+    int32_t hi_c = (int32_t)ceilf(hi * scale);
     int32_t pad = (hi_c - lo_c) / 10 + 1;
     lv_chart_set_axis_range(s_chart, LV_CHART_AXIS_PRIMARY_Y, lo_c - pad, hi_c + pad);
     lv_chart_set_point_count(s_chart, s->series_len);
     for (int i = 0; i < s->series_len; i++) {
-        lv_chart_set_series_value_by_id(s_chart, s_series, i, (int32_t)lroundf(s->series[i] * 100.0f));
+        lv_chart_set_series_value_by_id(s_chart, s_series, i, (int32_t)lroundf(s->series[i] * scale));
     }
     lv_chart_set_series_color(s_chart, s_series, s->has_quote ? color : UI_ACCENT);
     lv_chart_refresh(s_chart);
@@ -158,26 +165,28 @@ void ui_detail_update(void)
     char tmp[24];
     char tmp2[24];
 
-    ui_set_text(s_symbol, stock_display_symbol(s->symbol, buf, sizeof(buf)));
+    ui_set_text(s_symbol, s->ticker);
+    lv_obj_set_style_text_color(s_symbol, ui_ticker_color(s), 0);
     lv_obj_align_to(s_name, s_symbol, LV_ALIGN_OUT_RIGHT_MID, 12, 2);
     ui_set_text(s_name, s->name);
 
-    ui_fmt_price(buf, sizeof(buf), s->last, s->has_quote);
+    ui_fmt_price(buf, sizeof(buf), s->last, s->has_quote, s->format);
     ui_set_text(s_price, buf);
-    ui_fmt_change(tmp, sizeof(tmp), s->change, s->has_quote);
+    ui_fmt_change(tmp, sizeof(tmp), s->change, s->has_quote, s->format);
     ui_fmt_pct(tmp2, sizeof(tmp2), s->change_pct, s->has_quote);
     snprintf(buf, sizeof(buf), "%s  (%s)", tmp, tmp2);
     ui_set_text(s_change, s->has_quote ? buf : "--");
-    lv_color_t color = ui_trend_color(s->change, s->has_quote);
+    /* By the % change: it decides the colour the same way for every format */
+    lv_color_t color = ui_trend_color(s->change_pct, s->has_quote);
     lv_obj_set_style_text_color(s_change, color, 0);
 
-    ui_fmt_price(buf, sizeof(buf), s->open, s->has_detail);
+    ui_fmt_price(buf, sizeof(buf), s->open, s->has_detail, s->format);
     ui_set_text(s_stats[STAT_OPEN], buf);
-    ui_fmt_price(buf, sizeof(buf), s->high, s->has_detail);
+    ui_fmt_price(buf, sizeof(buf), s->high, s->has_detail, s->format);
     ui_set_text(s_stats[STAT_HIGH], buf);
-    ui_fmt_price(buf, sizeof(buf), s->low, s->has_detail);
+    ui_fmt_price(buf, sizeof(buf), s->low, s->has_detail, s->format);
     ui_set_text(s_stats[STAT_LOW], buf);
-    ui_fmt_price(buf, sizeof(buf), s->prev_close, s->has_quote);
+    ui_fmt_price(buf, sizeof(buf), s->prev_close, s->has_quote, s->format);
     ui_set_text(s_stats[STAT_PREV], buf);
     ui_fmt_volume(buf, sizeof(buf), s->volume, s->has_detail);
     ui_set_text(s_stats[STAT_VOLUME], buf);

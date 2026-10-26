@@ -35,17 +35,21 @@ static void print_value(double v, bool valid, const char *suffix)
 static int cmd_list(int argc, char **argv)
 {
     int n = model_snapshot(s_list, STOCK_MAX);
+    int stocks = 0;
     printf("%-8s %9s %9s %9s  %s\n", "Symbol", "Last", "Chg", "Chg %", "Name");
     for (int i = 0; i < n; i++) {
         const stock_t *s = &s_list[i];
-        char sym[STOCK_SYMBOL_LEN];
-        printf("%-8s ", stock_display_symbol(s->symbol, sym, sizeof(sym)));
+        if (s->group == STOCK_GROUP_MARKET && (i == 0 || s_list[i - 1].group != STOCK_GROUP_MARKET)) {
+            printf("-- Market\n");
+        }
+        stocks += s->group == STOCK_GROUP_WATCHLIST;
+        printf("%-8s ", s->ticker);
         print_value(s->last, s->has_quote, " ");
         print_value(s->change, s->has_quote, " ");
         print_value(s->change_pct, s->has_quote, "%");
-        printf("  %s%s\n", s->name, s->not_found ? "  [no data on Yahoo]" : "");
+        printf("  %s%s\n", s->name, s->not_found ? "  [no data at the source]" : "");
     }
-    printf("%d stocks\n", n);
+    printf("%d stocks, %d market rows\n", stocks, n - stocks);
     return 0;
 }
 
@@ -164,7 +168,7 @@ void cli_start(void)
     ESP_ERROR_CHECK(esp_console_new_repl_uart(&uart_config, &repl_config, &repl));
 
     const esp_console_cmd_t cmds[] = {
-        {.command = "list", .help = "Show the watchlist with the latest quotes", .func = cmd_list},
+        {.command = "list", .help = "Show the watchlist and the market rows with the latest quotes", .func = cmd_list},
         {.command = "wifi", .help = "Show Wi-Fi status, or set the active profile: wifi \"<ssid>\" \"<password>\"", .hint = "[<ssid> [<password>]]", .func = cmd_wifi},
         {.command = "interval", .help = "Show or set the refresh interval in seconds (10..3600)", .hint = "[<seconds>]", .func = cmd_interval},
         {.command = "speed", .help = "Show or set the auto-roll speed: 0 (stopped) to 1.0 (one row per second), default 0.3", .hint = "[<x>]", .func = cmd_speed},

@@ -165,6 +165,100 @@ esp_err_t settings_set_roll_speed(int tenths, bool save)
     return err;
 }
 
+static volatile int8_t s_autoscroll[SETTINGS_PAGES] = {-1, -1}; /* -1 = not loaded from NVS yet */
+
+bool settings_get_autoscroll(int page)
+{
+    if (page < 0 || page >= SETTINGS_PAGES) {
+        return false;
+    }
+    if (s_autoscroll[page] < 0) {
+        uint8_t value = 1;
+        char key[16];
+        snprintf(key, sizeof(key), "autoscroll%d", page);
+        nvs_handle_t nvs;
+        if (nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs) == ESP_OK) {
+            nvs_get_u8(nvs, key, &value);
+            nvs_close(nvs);
+        }
+        s_autoscroll[page] = value != 0;
+    }
+    return s_autoscroll[page] != 0;
+}
+
+esp_err_t settings_set_autoscroll(int page, bool on)
+{
+    if (page < 0 || page >= SETTINGS_PAGES) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    s_autoscroll[page] = on;
+    char key[16];
+    snprintf(key, sizeof(key), "autoscroll%d", page);
+    nvs_handle_t nvs;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_set_u8(nvs, key, on ? 1 : 0);
+    if (err == ESP_OK) {
+        err = nvs_commit(nvs);
+    }
+    nvs_close(nvs);
+    return err;
+}
+
+static esp_err_t save_u8(const char *key, uint8_t value)
+{
+    nvs_handle_t nvs;
+    esp_err_t err = nvs_open(NVS_NAMESPACE, NVS_READWRITE, &nvs);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = nvs_set_u8(nvs, key, value);
+    if (err == ESP_OK) {
+        err = nvs_commit(nvs);
+    }
+    nvs_close(nvs);
+    return err;
+}
+
+static uint8_t load_u8(const char *key, uint8_t default_value)
+{
+    uint8_t value = default_value;
+    nvs_handle_t nvs;
+    if (nvs_open(NVS_NAMESPACE, NVS_READONLY, &nvs) == ESP_OK) {
+        nvs_get_u8(nvs, key, &value);
+        nvs_close(nvs);
+    }
+    return value;
+}
+
+int settings_get_brightness(void)
+{
+    int value = load_u8("brightness", 100);
+    return value >= SETTINGS_BRIGHTNESS_MIN && value <= 100 ? value : 100;
+}
+
+esp_err_t settings_set_brightness(int percent)
+{
+    if (percent < SETTINGS_BRIGHTNESS_MIN || percent > 100) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return save_u8("brightness", (uint8_t)percent);
+}
+
+/* Stored as "orientation": the older "upside_down" key had the opposite meaning (the default
+   orientation changed), so it is ignored */
+bool settings_get_upside_down(void)
+{
+    return load_u8("orientation", 0) != 0;
+}
+
+esp_err_t settings_set_upside_down(bool on)
+{
+    return save_u8("orientation", on ? 1 : 0);
+}
+
 int settings_get_refresh_s(void)
 {
     int32_t value = CONFIG_STOCK_REFRESH_INTERVAL_S;

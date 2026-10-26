@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <time.h>
 #include "lvgl.h"
+#include "stock_model.h"
 
 #define UI_BG_SCREEN      lv_color_hex(0x0D1117)
 #define UI_BG_HEADER      lv_color_hex(0x161B22)
@@ -13,7 +14,8 @@
 #define UI_TRACK          lv_color_hex(0x30363D)
 #define UI_TEXT_PRIMARY   lv_color_hex(0xE6EDF3)
 #define UI_TEXT_SECONDARY lv_color_hex(0x8B949E)
-#define UI_GOLD           lv_color_hex(0xF2C94C)
+#define UI_GOLD           lv_color_hex(0xF2C94C) /* stock tickers */
+#define UI_PURPLE         lv_color_hex(0xA371F7) /* market tickers */
 #define UI_ACCENT         lv_color_hex(0x2F81F7)
 #define UI_UP             lv_color_hex(0x2EA043)
 #define UI_DOWN           lv_color_hex(0xF85149)
@@ -41,6 +43,8 @@ void ui_theme_init(lv_display_t *disp);
 
 /* Colour for a price change: up, down, or flat (also used when there is no data) */
 lv_color_t ui_trend_color(double change, bool valid);
+/* Ticker colour: gold for the stocks, purple for the market page */
+lv_color_t ui_ticker_color(const stock_t *s);
 
 /* A label with the given font and colour, no other styling */
 lv_obj_t *ui_label_create(lv_obj_t *parent, const lv_font_t *font, lv_color_t color);
@@ -54,8 +58,8 @@ lv_obj_t *ui_box_create(lv_obj_t *parent);
  * Number formatting with integer arithmetic (independent of printf float support).
  * Invalid or NaN values print as "--".
  */
-void ui_fmt_price(char *buf, size_t len, double v, bool valid);   /* 61.49 */
-void ui_fmt_change(char *buf, size_t len, double v, bool valid);  /* +0.49, -2.54 */
+void ui_fmt_price(char *buf, size_t len, double v, bool valid, stock_format_t fmt);  /* 61.49, 205,083 */
+void ui_fmt_change(char *buf, size_t len, double v, bool valid, stock_format_t fmt); /* +0.49, -2.54 */
 void ui_fmt_pct(char *buf, size_t len, double v, bool valid);     /* +0.57%, -3.97% */
 void ui_fmt_volume(char *buf, size_t len, double v, bool valid);  /* 224.07K, 39.59M */
 void ui_fmt_time(char *buf, size_t len, time_t t, bool seconds);  /* 16:54 or 16:54:59, local time */

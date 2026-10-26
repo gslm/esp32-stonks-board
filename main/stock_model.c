@@ -29,6 +29,25 @@ static const default_stock_t DEFAULT_STOCKS[] = {
     {"BBSE3.SA", "BB Seguridade"},
 };
 
+typedef struct {
+    const char *symbol;
+    const char *ticker;
+    const char *name;
+    stock_format_t format;
+    stock_source_t source;
+} market_item_t;
+
+/* The "Market" page. DI futures are not on Yahoo; TradingView's public scanner has them. */
+static const market_item_t MARKET[] = {
+    {"^BVSP", "IBOV", "Ibovespa index", STOCK_FMT_INDEX, STOCK_SOURCE_YAHOO},
+    {"BRL=X", "USD/BRL", "US dollar in Brazilian reais", STOCK_FMT_FX, STOCK_SOURCE_YAHOO},
+    {"EWZ", "EWZ", "iShares MSCI Brazil ETF (NYSE, US$)", STOCK_FMT_PRICE, STOCK_SOURCE_YAHOO},
+    {"BMFBOVESPA:DI11!", "DI11!", "DI rate futures, nearest contract (% a year)", STOCK_FMT_RATE, STOCK_SOURCE_TRADINGVIEW},
+    {"BMFBOVESPA:DI1F2028", "DI1F28", "DI rate futures, January 2028 (% a year)", STOCK_FMT_RATE, STOCK_SOURCE_TRADINGVIEW},
+    {"BMFBOVESPA:DI1F2029", "DI1F29", "DI rate futures, January 2029 (% a year)", STOCK_FMT_RATE, STOCK_SOURCE_TRADINGVIEW},
+    {"BMFBOVESPA:DI1F2030", "DI1F30", "DI rate futures, January 2030 (% a year)", STOCK_FMT_RATE, STOCK_SOURCE_TRADINGVIEW},
+};
+
 static SemaphoreHandle_t s_mutex;
 static stock_t s_stocks[STOCK_MAX];
 static int s_count;
@@ -43,7 +62,8 @@ static app_status_t s_status;
 /* Symbol helpers                                                                                  */
 /* ---------------------------------------------------------------------------------------------- */
 
-const char *stock_display_symbol(const char *symbol, char *buf, size_t buf_len)
+/* Ticker shown on screen: the Yahoo symbol without ".SA" ("VALE3.SA" -> "VALE3") */
+static void ticker_from_symbol(const char *symbol, char *buf, size_t buf_len)
 {
     size_t len = strlen(symbol);
     if (len > 3 && strcasecmp(symbol + len - 3, ".SA") == 0) {
@@ -54,7 +74,6 @@ const char *stock_display_symbol(const char *symbol, char *buf, size_t buf_len)
     }
     memcpy(buf, symbol, len);
     buf[len] = '\0';
-    return buf;
 }
 
 /* Matches "VALE3.SA" against "VALE3.SA", "vale3.sa" or "VALE3" */
@@ -77,12 +96,15 @@ static int find_locked(const char *symbol)
     return -1;
 }
 
-static void add_locked(const char *symbol, const char *name)
+static stock_t *add_locked(const char *symbol, const char *name, stock_group_t group)
 {
     stock_t *s = &s_stocks[s_count++];
     memset(s, 0, sizeof(*s));
     strlcpy(s->symbol, symbol, sizeof(s->symbol));
+    ticker_from_symbol(symbol, s->ticker, sizeof(s->ticker));
     strlcpy(s->name, name, sizeof(s->name));
+    s->group = group;
+    return s;
 }
 
 void model_init(void)
@@ -91,9 +113,16 @@ void model_init(void)
     assert(s_mutex);
     LOCK();
     for (size_t i = 0; i < sizeof(DEFAULT_STOCKS) / sizeof(DEFAULT_STOCKS[0]) && s_count < STOCK_MAX; i++) {
-        add_locked(DEFAULT_STOCKS[i].symbol, DEFAULT_STOCKS[i].name);
+        add_locked(DEFAULT_STOCKS[i].symbol, DEFAULT_STOCKS[i].name, STOCK_GROUP_WATCHLIST);
     }
-    ESP_LOGI(TAG, "Watchlist: %d stocks", s_count);
+    int stocks = s_count;
+    for (size_t i = 0; i < sizeof(MARKET) / sizeof(MARKET[0]) && s_count < STOCK_MAX; i++) {
+        stock_t *s = add_locked(MARKET[i].symbol, MARKET[i].name, STOCK_GROUP_MARKET);
+        strlcpy(s->ticker, MARKET[i].ticker, sizeof(s->ticker));
+        s->format = MARKET[i].format;
+        s->source = MARKET[i].source;
+    }
+    ESP_LOGI(TAG, "Watchlist: %d stocks, market: %d", stocks, s_count - stocks);
     s_status.net = NET_NOT_CONFIGURED;
     s_list_version++;
     s_data_version++;
@@ -190,7 +219,9 @@ void model_set_detail(const char *symbol, const char *name, double open, double 
         if (series_len > STOCK_SERIES_MAX) {
             series_len = STOCK_SERIES_MAX;
         }
-        memcpy(s->series, series, (size_t)series_len * sizeof(float));
+        if (series_len > 0) {
+            memcpy(s->series, series, (size_t)series_len * sizeof(float));
+        }
         s->series_len = (uint8_t)series_len;
         s_data_version++;
     }

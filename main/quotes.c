@@ -17,6 +17,7 @@
 static const char *TAG = "quotes";
 
 #define BASE_URL      "https://query1.finance.yahoo.com"
+#define TV_SCAN_URL   "https://scanner.tradingview.com/futures/scan" /* DI futures, 15 min delayed */
 /* Yahoo answers HTTP 429 to some generic clients (e.g. curl's default); a browser-like agent works */
 #define USER_AGENT    "Mozilla/5.0 (compatible; esp32-stock-watchlist/1.0)"
 #define RESPONSE_MAX  (48 * 1024)
@@ -52,6 +53,7 @@ static esp_http_client_handle_t s_client;
 static response_t s_resp;
 static chart_data_t s_chart;
 EXT_RAM_BSS_ATTR static stock_t s_list[STOCK_MAX]; /* snapshot used by the fetch task only, in PSRAM */
+EXT_RAM_BSS_ATTR static stock_t s_one;             /* one stock, looked up by the fetch task */
 
 /* Detail request from the UI, guarded by a spinlock (only a short copy happens inside) */
 static portMUX_TYPE s_req_lock = portMUX_INITIALIZER_UNLOCKED;
@@ -76,8 +78,11 @@ static esp_err_t on_http_event(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-/* GET with a kept-alive connection. Returns the HTTP status, or -1 when the request failed. */
-static int http_get(const char *url)
+/*
+ * GET, or POST of a JSON body when post_json is not NULL, with a kept-alive connection (it is
+ * reopened when the host changes). Returns the HTTP status, or -1 when the request failed.
+ */
+static int http_request(const char *url, const char *post_json)
 {
     if (s_client == NULL) {
         const esp_http_client_config_t cfg = {
@@ -97,6 +102,15 @@ static int http_get(const char *url)
         }
     } else {
         esp_http_client_set_url(s_client, url);
+    }
+    if (post_json) {
+        esp_http_client_set_method(s_client, HTTP_METHOD_POST);
+        esp_http_client_set_header(s_client, "Content-Type", "application/json");
+        esp_http_client_set_post_field(s_client, post_json, (int)strlen(post_json));
+    } else {
+        esp_http_client_set_method(s_client, HTTP_METHOD_GET);
+        esp_http_client_delete_header(s_client, "Content-Type");
+        esp_http_client_set_post_field(s_client, NULL, 0);
     }
 
     s_resp.len = 0;
@@ -272,6 +286,39 @@ static bool parse_chart(const char *json, chart_data_t *out)
     return true;
 }
 
+/*
+ * TradingView scan: {"data": [{"s": "BMFBOVESPA:DI11!", "d": [close, change_abs, open, high, low,
+ * volume, update_time]}, ...]}, the "d" values in the order of TV_COLUMNS. Returns the number of
+ * quotes stored, -1 on bad JSON.
+ */
+#define TV_COLUMNS "\"close\",\"change_abs\",\"open\",\"high\",\"low\",\"volume\",\"update_time\""
+
+static int parse_tradingview(const char *json)
+{
+    cJSON *root = cJSON_Parse(json);
+    if (root == NULL) {
+        return -1;
+    }
+    int count = 0;
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, cJSON_GetObjectItem(root, "data")) {
+        const cJSON *symbol = cJSON_GetObjectItem(item, "s");
+        const cJSON *d = cJSON_GetObjectItem(item, "d");
+        double last = number_or_nan(cJSON_GetArrayItem(d, 0));
+        double change = number_or_nan(cJSON_GetArrayItem(d, 1));
+        double t = number_or_nan(cJSON_GetArrayItem(d, 6));
+        if (cJSON_IsString(symbol) && !isnan(last) && !isnan(change)) {
+            model_set_quote(symbol->valuestring, last, last - change, isnan(t) ? 0 : (time_t)t);
+            model_set_detail(symbol->valuestring, NULL, number_or_nan(cJSON_GetArrayItem(d, 2)),
+                             number_or_nan(cJSON_GetArrayItem(d, 3)), number_or_nan(cJSON_GetArrayItem(d, 4)),
+                             number_or_nan(cJSON_GetArrayItem(d, 5)), NULL, 0);
+            count++;
+        }
+    }
+    cJSON_Delete(root);
+    return count;
+}
+
 static void apply_chart(const char *symbol, const chart_data_t *c)
 {
     if (!isnan(c->price) && !isnan(c->prev_close)) {
@@ -291,7 +338,7 @@ static int fetch_detail(const char *symbol)
     append_symbol(url, sizeof(url), symbol);
     strlcat(url, "?range=1d&interval=15m", sizeof(url));
 
-    int status = http_get(url);
+    int status = http_request(url, NULL);
     if (status == 404) {
         model_set_not_found(symbol);
     } else if (status == 200 && parse_chart(s_resp.data, &s_chart)) {
@@ -300,8 +347,20 @@ static int fetch_detail(const char *symbol)
     return status;
 }
 
+/* The Yahoo symbols of the snapshot, so batches and round-robin can skip the other sources */
+static int yahoo_symbols(int n, const char *out[])
+{
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        if (s_list[i].source == STOCK_SOURCE_YAHOO) {
+            out[count++] = s_list[i].symbol;
+        }
+    }
+    return count;
+}
+
 /* One spark request per batch of symbols. Returns the HTTP status of the first failure, or 200. */
-static int refresh_quotes(int n, int *quotes_out)
+static int refresh_quotes(const char *symbols[], int n, int *quotes_out)
 {
     static char url[URL_MAX];
     *quotes_out = 0;
@@ -311,11 +370,11 @@ static int refresh_quotes(int n, int *quotes_out)
             if (i > start) {
                 strlcat(url, ",", sizeof(url));
             }
-            append_symbol(url, sizeof(url), s_list[i].symbol);
+            append_symbol(url, sizeof(url), symbols[i]);
         }
         strlcat(url, "&range=1d&interval=1d", sizeof(url));
 
-        int status = http_get(url);
+        int status = http_request(url, NULL);
         if (status != 200) {
             return status;
         }
@@ -328,14 +387,46 @@ static int refresh_quotes(int n, int *quotes_out)
     return 200;
 }
 
+/* One TradingView request for all its symbols. A failure is only logged: those rows go stale. */
+static int refresh_tradingview(int n)
+{
+    static char body[64 + STOCK_MAX * (STOCK_SYMBOL_LEN + 3) + sizeof(TV_COLUMNS)];
+    strlcpy(body, "{\"symbols\":{\"tickers\":[", sizeof(body));
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        if (s_list[i].source == STOCK_SOURCE_TRADINGVIEW) {
+            strlcat(body, count++ ? ",\"" : "\"", sizeof(body));
+            strlcat(body, s_list[i].symbol, sizeof(body));
+            strlcat(body, "\"", sizeof(body));
+        }
+    }
+    if (count == 0) {
+        return 0;
+    }
+    strlcat(body, "]},\"columns\":[" TV_COLUMNS "]}", sizeof(body));
+
+    int status = http_request(TV_SCAN_URL, body);
+    int quotes = status == 200 ? parse_tradingview(s_resp.data) : -1;
+    if (quotes < 0) {
+        ESP_LOGW(TAG, "TradingView refresh failed (HTTP %d)", status);
+        return 0;
+    }
+    return quotes;
+}
+
 /* Returns the time to wait before the next refresh */
 static TickType_t refresh_cycle(void)
 {
     static int round_robin;
+    static const char *yahoo[STOCK_MAX];
     int64_t t0 = esp_timer_get_time();
     int n = model_snapshot(s_list, STOCK_MAX);
-    int quotes = 0;
-    int status = n > 0 ? refresh_quotes(n, &quotes) : 200;
+    int ny = yahoo_symbols(n, yahoo);
+    /* TradingView first, so the Yahoo connection stays open for the detail requests that follow */
+    int quotes = refresh_tradingview(n);
+    int yahoo_quotes = 0;
+    int status = ny > 0 ? refresh_quotes(yahoo, ny, &yahoo_quotes) : 200;
+    quotes += yahoo_quotes;
 
     if (status != 200) {
         char error[48];
@@ -357,13 +448,13 @@ static TickType_t refresh_cycle(void)
     /* Detail: every stock still missing it (first cycles), otherwise one per cycle, round-robin */
     int details = 0;
     for (int i = 0; i < n; i++) {
-        if (!s_list[i].has_detail && !s_list[i].not_found) {
+        if (s_list[i].source == STOCK_SOURCE_YAHOO && !s_list[i].has_detail && !s_list[i].not_found) {
             fetch_detail(s_list[i].symbol);
             details++;
         }
     }
-    if (details == 0 && n > 0) {
-        fetch_detail(s_list[round_robin++ % n].symbol);
+    if (details == 0 && ny > 0) {
+        fetch_detail(yahoo[round_robin++ % ny]);
         details = 1;
     }
 
@@ -391,7 +482,8 @@ static void quotes_task(void *arg)
             portENTER_CRITICAL(&s_req_lock);
             strlcpy(symbol, s_detail_request, sizeof(symbol));
             portEXIT_CRITICAL(&s_req_lock);
-            if (symbol[0]) {
+            /* TradingView rows get their day range with every refresh, and have no chart */
+            if (symbol[0] && model_get(symbol, &s_one) && s_one.source == STOCK_SOURCE_YAHOO) {
                 fetch_detail(symbol);
             }
         }

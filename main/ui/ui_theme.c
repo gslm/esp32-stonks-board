@@ -1,7 +1,20 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "ui_theme.h"
+
+/* How each stock_format_t prints. The suffix is for the price only, not for the change. */
+static const struct {
+    int decimals;
+    bool thousands; /* "," between groups of three digits */
+    const char *suffix;
+} FORMATS[] = {
+    [STOCK_FMT_PRICE] = {2, false, ""},
+    [STOCK_FMT_INDEX] = {0, true, ""},
+    [STOCK_FMT_FX] = {4, false, ""},
+    [STOCK_FMT_RATE] = {2, false, "%"},
+};
 
 void ui_theme_init(lv_display_t *disp)
 {
@@ -16,6 +29,11 @@ lv_color_t ui_trend_color(double change, bool valid)
         return UI_FLAT;
     }
     return change > 0 ? UI_UP : UI_DOWN;
+}
+
+lv_color_t ui_ticker_color(const stock_t *s)
+{
+    return s->group == STOCK_GROUP_MARKET ? UI_PURPLE : UI_GOLD;
 }
 
 lv_obj_t *ui_label_create(lv_obj_t *parent, const lv_font_t *font, lv_color_t color)
@@ -43,30 +61,60 @@ lv_obj_t *ui_box_create(lv_obj_t *parent)
     return box;
 }
 
-/* value * 100 rounded, as sign + integer part + 2 decimals */
-static void fmt_fixed2(char *buf, size_t len, double v, const char *plus, const char *suffix)
+/* 205083 -> "205,083" */
+static void fmt_thousands(char *buf, size_t len, long long v)
 {
-    long long cents = llround(v * 100.0);
-    const char *sign = cents < 0 ? "-" : (cents > 0 ? plus : "");
-    long long a = llabs(cents);
-    snprintf(buf, len, "%s%lld.%02lld%s", sign, a / 100, a % 100, suffix);
+    if (v < 1000) {
+        snprintf(buf, len, "%lld", v);
+        return;
+    }
+    fmt_thousands(buf, len, v / 1000);
+    size_t used = strlen(buf);
+    snprintf(buf + used, len - used, ",%03lld", v % 1000);
 }
 
-void ui_fmt_price(char *buf, size_t len, double v, bool valid)
+/* value rounded to `decimals` (0..4) places, as sign + integer part + decimals + suffix */
+static void fmt_fixed(char *buf, size_t len, double v, int decimals, bool thousands, const char *plus,
+                      const char *suffix)
 {
-    if (!valid || isnan(v)) {
-        snprintf(buf, len, "--");
+    static const long long SCALE[] = {1, 10, 100, 1000, 10000};
+    decimals = LV_CLAMP(0, decimals, 4);
+    long long scaled = llround(v * SCALE[decimals]);
+    const char *sign = scaled < 0 ? "-" : (scaled > 0 ? plus : "");
+    long long a = llabs(scaled);
+    char whole[24];
+    if (thousands) {
+        fmt_thousands(whole, sizeof(whole), a / SCALE[decimals]);
     } else {
-        fmt_fixed2(buf, len, v, "", "");
+        snprintf(whole, sizeof(whole), "%lld", a / SCALE[decimals]);
+    }
+    if (decimals > 0) {
+        snprintf(buf, len, "%s%s.%0*lld%s", sign, whole, decimals, a % SCALE[decimals], suffix);
+    } else {
+        snprintf(buf, len, "%s%s%s", sign, whole, suffix);
     }
 }
 
-void ui_fmt_change(char *buf, size_t len, double v, bool valid)
+static void fmt_fixed2(char *buf, size_t len, double v, const char *plus, const char *suffix)
+{
+    fmt_fixed(buf, len, v, 2, false, plus, suffix);
+}
+
+void ui_fmt_price(char *buf, size_t len, double v, bool valid, stock_format_t fmt)
 {
     if (!valid || isnan(v)) {
         snprintf(buf, len, "--");
     } else {
-        fmt_fixed2(buf, len, v, "+", "");
+        fmt_fixed(buf, len, v, FORMATS[fmt].decimals, FORMATS[fmt].thousands, "", FORMATS[fmt].suffix);
+    }
+}
+
+void ui_fmt_change(char *buf, size_t len, double v, bool valid, stock_format_t fmt)
+{
+    if (!valid || isnan(v)) {
+        snprintf(buf, len, "--");
+    } else {
+        fmt_fixed(buf, len, v, FORMATS[fmt].decimals, FORMATS[fmt].thousands, "+", "");
     }
 }
 

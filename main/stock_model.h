@@ -1,6 +1,6 @@
 /*
- * Watchlist data model: the list of stocks, their latest quotes, and the app status.
- * The list itself is fixed (DEFAULT_STOCKS in stock_model.c); edit it there and rebuild.
+ * Data model: the watchlist stocks, the market indicators, their latest quotes, and the app status.
+ * Both lists are fixed (DEFAULT_STOCKS and MARKET in stock_model.c); edit them there and rebuild.
  *
  * Shared by three tasks (LVGL, quote fetcher, console), so every access goes through a
  * mutex inside this module. Readers take copies (model_snapshot / model_get) and compare
@@ -14,13 +14,36 @@
 #include <time.h>
 
 #define STOCK_MAX        24
-#define STOCK_SYMBOL_LEN 20   /* Yahoo symbol, e.g. "VALE3.SA" */
+#define STOCK_SYMBOL_LEN 24   /* data source symbol, e.g. "VALE3.SA" or "BMFBOVESPA:DI1F2028" */
+#define STOCK_TICKER_LEN 12   /* as shown on screen, e.g. "VALE3" */
 #define STOCK_NAME_LEN   64
 #define STOCK_SERIES_MAX 40   /* intraday closes kept for the detail chart */
 
+typedef enum {
+    STOCK_GROUP_WATCHLIST, /* "Stocks" page */
+    STOCK_GROUP_MARKET,    /* "Market" page: index, dollar, ETF, interest rate futures */
+} stock_group_t;
+
+/* How the price is printed */
+typedef enum {
+    STOCK_FMT_PRICE, /* 61.49 */
+    STOCK_FMT_INDEX, /* 205,083 */
+    STOCK_FMT_FX,    /* 4.9652 */
+    STOCK_FMT_RATE,  /* 13.47% */
+} stock_format_t;
+
+typedef enum {
+    STOCK_SOURCE_YAHOO,
+    STOCK_SOURCE_TRADINGVIEW, /* no intraday chart */
+} stock_source_t;
+
 typedef struct {
-    char symbol[STOCK_SYMBOL_LEN]; /* Yahoo symbol. B3 tickers carry ".SA"; see stock_display_symbol() */
+    char symbol[STOCK_SYMBOL_LEN]; /* symbol at the data source. B3 tickers on Yahoo carry ".SA" */
+    char ticker[STOCK_TICKER_LEN];
     char name[STOCK_NAME_LEN];
+    stock_group_t group;
+    stock_format_t format;
+    stock_source_t source;
 
     /* Fast refresh: all symbols in one request */
     bool has_quote;
@@ -39,7 +62,7 @@ typedef struct {
     uint8_t series_len;
     float series[STOCK_SERIES_MAX];
 
-    bool not_found; /* Yahoo has no data for this symbol (e.g. delisted) */
+    bool not_found; /* the source has no data for this symbol (e.g. delisted) */
 } stock_t;
 
 typedef enum {
@@ -54,11 +77,11 @@ typedef struct {
     char error[64];     /* why the last refresh failed, "" if it worked */
 } app_status_t;
 
-/* Fills the model with the watchlist (the fixed list in stock_model.c). */
+/* Fills the model with the watchlist and the market indicators (the fixed lists in stock_model.c). */
 void model_init(void);
 
 /*
- * Copies for readers. model_snapshot returns the number of stocks copied.
+ * Copies for readers. model_snapshot returns the number of stocks copied (both groups, watchlist first).
  * Symbols match case-insensitively, with or without the ".SA" suffix ("vale3" finds "VALE3.SA").
  */
 int model_snapshot(stock_t *out, int max);
@@ -77,6 +100,3 @@ void model_set_not_found(const char *symbol);
 void model_get_status(app_status_t *out);
 void model_set_net_state(net_state_t state);
 void model_set_refresh_result(bool ok, const char *error);
-
-/* Yahoo symbol as shown on screen ("VALE3.SA" -> "VALE3") */
-const char *stock_display_symbol(const char *symbol, char *buf, size_t buf_len);
